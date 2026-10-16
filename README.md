@@ -5,7 +5,7 @@ A citric acid cycle review game for undergraduate biochemistry, and the sequel t
 **Play:** https://neogio73.github.io/krebs-run-play/
 **The game before it:** https://neogio73.github.io/battle-of-embden-play/
 
-This repository holds only the finished web build that the site serves: the game (`index.html`, `Build/`) and its page scripts. It runs in the browser on a computer, and nothing is sent anywhere: progress is saved in the student's own browser. When a student arrives from The Battle of Embden (`?from=embden`), the opening reads, without changing anything, whether Embden was finished in this browser and the name its certificate was made for (`embden-handoff.js`).
+This repository holds only the finished web build that the site serves: the game (`index.html`, `Build/`), its page scripts, and the course announcement banner (`banner.html`, with light copies of the models stored scrambled in `*.bin`). It runs in the browser on a computer, and nothing is sent anywhere: progress is saved in the student's own browser. When a student arrives from The Battle of Embden (`?from=embden`), the opening reads, without changing anything, whether Embden was finished in this browser and the name its certificate was made for (`embden-handoff.js`).
 
 After the last gate the Falcon jumps to hyperspace. A student who cleared all 58 gates in one visit can then download a completion certificate for the course's extra credit: a PNG picture with a verification code, drawn in the browser (`certificate.js`). The name box starts with the name from the student's Embden certificate, when there is one in this browser.
 

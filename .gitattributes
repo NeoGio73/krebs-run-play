@@ -1,3 +1,4 @@
 *.unityweb binary
 *.png binary
 *.jpg binary
+*.bin binary

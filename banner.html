@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Krebs Run · Extra Credit</title>
+<meta name="description" content="Animated banner for The Krebs Run, an extra-credit citric acid cycle game.">
+<!-- Models, lightened for the web: the Millennium Falcon, the Death Star and the TIE fighter, all supplied by the course author
+     (the Death Star's and TIE fighter's downloads did not record an author or licence). The forest moon, asteroids, gates and
+     effects are drawn in code. three.js (MIT). Unofficial fan learning game, not affiliated with Lucasfilm or Disney. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap">
+<style>
+/* Built like The Battle of Embden's banner: real words on the left, the scene behind and to the right.
+   Colours are the game's: deep-space ink, cyan readouts and gold. */
+:root {
+  --ink: #03060d;
+  --gold: #ffc24d;
+  --cyan: #3bdbeb;
+  --green: #57e0a6;
+  --white: #eef7f8;
+  --muted: #b3c8cc;
+  --f-ui: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--ink); color: var(--white); font-family: var(--f-ui); overflow: hidden; -webkit-font-smoothing: antialiased; }
+#stage { position: fixed; inset: 0; overflow: hidden; background: radial-gradient(120% 140% at 70% 40%, #0a1424 0%, var(--ink) 70%); }
+/* the poster shows until the 3D scene is ready, and stays if it can't run */
+#poster { position: absolute; inset: 0; background: url(banner_poster.jpg) center / cover no-repeat; opacity: 0; transition: opacity 0.6s ease; }
+body.poster #poster { opacity: 1; }
+#c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 1.2s ease; }
+body.live #c { opacity: 1; }
+/* darken behind the words so they stay readable over the scene */
+#scrim { position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(3,6,13,0.94) 0%, rgba(3,6,13,0.86) 28%, rgba(3,6,13,0.42) 48%, rgba(3,6,13,0) 62%),
+              linear-gradient(0deg, rgba(3,6,13,0.5) 0%, rgba(3,6,13,0) 24%); }
+.corner { position: absolute; width: 22px; height: 22px; border: 0 solid rgba(255,194,77,0.6); pointer-events: none; }
+.corner.tl { left: 12px; top: 12px; border-left-width: 2px; border-top-width: 2px; }
+.corner.tr { right: 12px; top: 12px; border-right-width: 2px; border-top-width: 2px; }
+.corner.bl { left: 12px; bottom: 12px; border-left-width: 2px; border-bottom-width: 2px; }
+.corner.br { right: 12px; bottom: 12px; border-right-width: 2px; border-bottom-width: 2px; }
+#copy { position: absolute; left: clamp(22px, 4.2vw, 48px); top: 50%; transform: translateY(-50%); width: min(44%, 450px); }
+.eyebrow { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: clamp(12px, 1.45vw, 14px);
+  letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; }
+.eyebrow .pts { color: var(--ink); background: var(--gold); padding: 4px 8px 3px; letter-spacing: 0.1em; border-radius: 2px; font-weight: 800; }
+h1 { margin: 12px 0 0; font-weight: 800; line-height: 0.92; letter-spacing: -0.01em; text-transform: uppercase; }
+h1 .the { display: block; font-size: clamp(14px, 2vw, 20px); font-weight: 700; letter-spacing: 0.3em; color: var(--cyan); margin-bottom: 8px; }
+h1 .big { display: block; font-size: clamp(36px, 6.6vw, 68px); color: #fff; letter-spacing: 0.01em; text-shadow: 0 2px 0 rgba(0,0,0,0.45), 0 0 30px rgba(59,219,235,0.25); }
+.lede { margin: 14px 0 0; font-size: clamp(14px, 1.7vw, 17px); line-height: 1.45; color: var(--white); max-width: 30em; text-shadow: 0 1px 8px rgba(0,0,0,0.85); }
+.lede b { color: var(--gold); font-weight: 700; }
+.cta { margin-top: clamp(14px, 2.3vw, 22px); display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; }
+.btn { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: clamp(14px, 1.6vw, 16px);
+  letter-spacing: 0.08em; color: var(--ink); background: var(--gold); text-decoration: none; padding: 12px 18px 11px; border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(255,194,77,0.4), 0 6px 22px rgba(0,0,0,0.35); transition: transform 0.15s ease, background 0.15s ease; }
+.btn:hover { background: #ffd47a; transform: translateY(-1px); }
+.btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.btn svg { width: 16px; height: 16px; }
+.meta { font-size: clamp(12px, 1.35vw, 14px); color: var(--muted); }
+#hud { position: absolute; right: 22px; bottom: 18px; display: flex; align-items: center; gap: 9px; font-weight: 700;
+  font-size: 12px; letter-spacing: 0.18em; color: var(--white); text-shadow: 0 1px 6px #000, 0 0 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.8s ease; }
+body.live #hud { opacity: 1; }
+#hud .blip { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); animation: blink 1.1s steps(2, start) infinite; }
+#hud.alert .blip { background: #ff6a55; box-shadow: 0 0 10px #ff6a55; }
+#hud.good .blip { background: var(--green); box-shadow: 0 0 10px var(--green); }
+/* the NADH fuel gauge, as on the game's flight screen */
+#gauge { display: none; align-items: center; gap: 7px; margin-right: 6px; color: var(--gold); }
+#gauge.on { display: inline-flex; }
+#gauge .bar { position: relative; width: 66px; height: 7px; background: rgba(255,194,77,0.18); box-shadow: 0 0 0 1px rgba(255,194,77,0.35); }
+#gauge i { position: absolute; left: 0; top: 0; bottom: 0; width: 33%; background: var(--gold); box-shadow: 0 0 8px rgba(255,194,77,0.7); }
+@keyframes blink { to { visibility: hidden; } }
+#copy > * { opacity: 0; transform: translateY(10px); animation: rise 0.7s cubic-bezier(.2,.7,.2,1) forwards; }
+#copy > :nth-child(1) { animation-delay: 0.1s; }
+#copy > :nth-child(2) { animation-delay: 0.22s; }
+#copy > :nth-child(3) { animation-delay: 0.36s; }
+#copy > :nth-child(4) { animation-delay: 0.5s; }
+@keyframes rise { to { opacity: 1; transform: none; } }
+/* narrow (a phone, or a thin course column): words on top, the action underneath */
+@media (max-aspect-ratio: 5/4) {
+  #scrim { background: linear-gradient(180deg, rgba(3,6,13,0.95) 0%, rgba(3,6,13,0.86) 42%, rgba(3,6,13,0.3) 60%, rgba(3,6,13,0) 70%); }
+  #copy { top: clamp(18px, 5vw, 30px); transform: none; width: auto; right: 22px; }
+  h1 { margin-top: 8px; }
+  h1 .big { font-size: clamp(30px, 9.5vw, 50px); }
+  h1 .the { font-size: clamp(12px, 3.5vw, 17px); margin-bottom: 5px; }
+  .eyebrow { font-size: clamp(11px, 3vw, 14px); }
+  .lede { font-size: clamp(13px, 3.6vw, 16px); line-height: 1.4; margin-top: 10px; }
+  .cta { margin-top: 12px; gap: 8px 10px; }
+  .btn { font-size: clamp(12px, 3.4vw, 15px); padding: 10px 13px 9px; }
+  .meta { font-size: clamp(11px, 2.9vw, 13px); }
+  #hud { display: none; }
+}
+@media (max-height: 300px) and (min-aspect-ratio: 5/4) { .lede { display: none; } }
+@media (prefers-reduced-motion: reduce) { #copy > * { animation: none; opacity: 1; transform: none; } #hud .blip { animation: none; } #c, #poster, #hud { transition: none; } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="poster"></div>
+  <canvas id="c" aria-hidden="true"></canvas>
+  <div id="scrim"></div>
+  <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+  <main id="copy">
+    <div class="eyebrow"><span>Extra credit</span><span class="pts">5 POINTS</span></div>
+    <h1><span class="the">The</span><span class="big">Krebs Run</span></h1>
+    <p class="lede">Fly the Falcon through the <b>citric acid cycle</b>: from pyruvate, around all eight steps, and on to ATP.</p>
+    <div class="cta">
+      <a class="btn" href="https://neogio73.github.io/krebs-run-play/" target="_blank" rel="noopener">LAUNCH THE GAME
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg></a>
+      <span class="meta">Play on a computer</span>
+    </div>
+  </main>
+  <div id="hud" aria-hidden="true"><span id="gauge"><span>NADH</span><span class="bar"><i id="gauge-fill"></i></span></span><span class="blip"></span><span id="hud-text">PYRUVATE IS ABOARD</span></div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script>
+  // If WebGL isn't available (or the 3D scene never gets going), the still picture is shown instead.
+  setTimeout(() => { if (!document.body.classList.contains('live')) document.body.classList.add('poster'); }, 9000);
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+
+const V3 = THREE.Vector3;
+const Y = new V3(0, 1, 0);
+const params = new URLSearchParams(location.search);
+const CAPTURE = params.has('capture');   // test/recording mode: time only advances when asked
+const STILL = !CAPTURE && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const lerp = (a, b, t) => a + (b - a) * t;
+function mulberry(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const rand = mulberry(20261016);
+const srgb = (r, g, b) => new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace);
+// the game's colours (KrebsGame.cs): gates A, B and C, and the green of a correct gate
+const LANE = [srgb(0.23, 0.86, 0.92), srgb(1, 0.76, 0.3), srgb(0.74, 0.6, 1)], GREEN = srgb(0.34, 0.88, 0.65);
+const INK = srgb(0.012, 0.024, 0.05);
+
+// ---------- renderer, scene, camera ----------
+const canvas = document.getElementById('c');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: CAPTURE });
+} catch (err) { document.body.classList.add('poster'); throw err; }
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+const scene = new THREE.Scene();
+scene.background = INK.clone();
+const camera = new THREE.PerspectiveCamera(30, 2, 0.3, 4000);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.25;
+// The sun is off to the left and a little toward the camera, so the Death Star's sunlit half faces the words and its night
+// side, with the window lights, faces right, as in the game.
+const SUN = new V3(-0.8, 0.35, 0.45).normalize();
+const sun = new THREE.DirectionalLight(srgb(1, 0.96, 0.88), 2.6);
+sun.position.copy(SUN).multiplyScalar(1000);
+scene.add(sun, sun.target, new THREE.HemisphereLight(srgb(0.45, 0.55, 0.7), srgb(0.05, 0.05, 0.07), 0.25));
+
+// ---------- textures drawn in code ----------
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+function radial(stops, size = 128) {
+  return canvasTex(size, size, (x, w) => {
+    const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
+    for (const [o, col] of stops) g.addColorStop(o, col);
+    x.fillStyle = g; x.fillRect(0, 0, w, w);
+  });
+}
+const TEX = {
+  blue: radial([[0, 'rgba(230,248,255,1)'], [0.3, 'rgba(120,205,255,0.7)'], [1, 'rgba(0,0,0,0)']], 64),
+  green: radial([[0, 'rgba(235,255,245,1)'], [0.3, 'rgba(87,224,166,0.7)'], [1, 'rgba(0,0,0,0)']], 64),
+  star: radial([[0, 'rgba(255,255,255,1)'], [0.35, 'rgba(220,235,255,0.7)'], [1, 'rgba(0,0,0,0)']], 32),
+};
+const additive = (map, color = 0xffffff) => new THREE.SpriteMaterial({ map, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false, fog: false });
+// The forest moon: deep green forest with darker ridges, a few lakes, and swirls of cloud.
+const moonTex = canvasTex(1024, 512, (x, w, h) => {
+  const r = mulberry(5); x.fillStyle = '#24482a'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1600; i++) { const g = 60 + r() * 70; x.fillStyle = r() < 0.6 ? `rgba(${g * 0.35 | 0},${g | 0},${g * 0.4 | 0},0.35)` : `rgba(${g * 0.25 | 0},${g * 0.55 | 0},${g * 0.3 | 0},0.4)`; x.beginPath(); x.ellipse(r() * w, r() * h, 3 + r() * 26, 2 + r() * 12, r() * 3, 0, 6.3); x.fill(); }
+  for (let i = 0; i < 26; i++) { x.fillStyle = `rgba(40,80,120,${0.5 + r() * 0.3})`; x.beginPath(); x.ellipse(r() * w, h * (0.2 + r() * 0.6), 6 + r() * 30, 3 + r() * 12, r() * 3, 0, 6.3); x.fill(); }
+  for (let i = 0; i < 260; i++) { x.fillStyle = `rgba(235,242,245,${0.12 + r() * 0.3})`; x.beginPath(); x.ellipse(r() * w, r() * h, 10 + r() * 60, 2 + r() * 7, (r() - 0.5) * 0.5, 0, 6.3); x.fill(); }
+});
+function letterTex(ch, color) {
+  return canvasTex(128, 128, (x, w) => { x.font = '800 92px Inter, "Segoe UI", Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#' + color.getHexString(THREE.SRGBColorSpace); x.shadowColor = x.fillStyle; x.shadowBlur = 14; x.fillText(ch, w / 2, w / 2 + 4); });
+}
+
+// A soft edge glow for spheres: the shield and the moon's air.
+function rimMaterial(color, power, strength) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: color.clone() }, uPower: { value: power }, uStrength: { value: strength } },
+    vertexShader: 'varying vec3 vN; varying vec3 vV; void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'uniform vec3 uColor; uniform float uPower; uniform float uStrength; varying vec3 vN; varying vec3 vV; void main() { float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), uPower); gl_FragColor = vec4(uColor * f * uStrength, 1.0); }',
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+}
+
+// ---------- the shots ----------
+// Five places in one stretch of space, one for each shot, far apart. Each is laid out in its own frame: the camera near the
+// origin, looking down -Z. The order is the game's: the climb from the moon (the opening), the Death Star's shield going
+// down, a gate on a lap of the cycle, the TIE fighters, and the jump to hyperspace (the ending).
+const SHOTS = [
+  { name: 'climb', base: new V3(0, 0, 0), dur: 4.2 },
+  { name: 'station', base: new V3(6000, 0, 0), dur: 3.4 },
+  { name: 'gates', base: new V3(12000, 0, 0), dur: 5.4 },
+  { name: 'ties', base: new V3(18000, 0, 0), dur: 3.0 },
+  { name: 'jump', base: new V3(24000, 0, 0), dur: 4.0 },
+];
+let acc = 0; for (const S of SHOTS) { S.start = acc; acc += S.dur; }
+const LOOP = acc;
+const SH = Object.fromEntries(SHOTS.map(s => [s.name, s]));
+const W = (S, x, y, z, out = new V3()) => out.set(x, y, z).add(S.base);
+
+// stars: a far sky that travels with the camera
+const sky = (() => {
+  const n = 2600, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), r = mulberry(11);
+  for (let i = 0; i < n; i++) {
+    const v = new V3(r() * 2 - 1, r() * 2 - 1, r() * 2 - 1).normalize().multiplyScalar(2600);
+    pos.set([v.x, v.y, v.z], i * 3); const b = 0.35 + r() * 0.65, warm = r();
+    col.set([b * (0.85 + 0.15 * warm), b * 0.92, b * (1.05 - 0.15 * warm)], i * 3);
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const p = new THREE.Points(g, new THREE.PointsMaterial({ map: TEX.star, size: 2.2, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false, toneMapped: false, fog: false }));
+  p.frustumCulled = false; scene.add(p); return p;
+})();
+
+// the forest moon, low in the first shot
+const moon = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 64), new THREE.MeshStandardMaterial({ map: moonTex, roughness: 1, metalness: 0, envMapIntensity: 0.1 }));
+moon.rotation.set(1.35, 0.6, 0.2); moon.scale.setScalar(190);   // a pole turned away, so the camera sees forest, not a pinwheel
+const moonAir = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 64), rimMaterial(srgb(0.45, 0.75, 1), 3.2, 1.1));
+moonAir.scale.setScalar(194);
+W(SH.climb, 60, -205, -260, moon.position); moonAir.position.copy(moon.position);
+scene.add(moon, moonAir);
+
+// asteroids, made in code as in the game: lumpy, faceted, slowly tumbling
+const rockGeos = [0, 1, 2, 3, 4].map(k => {
+  const g = new THREE.IcosahedronGeometry(1, 2), p = g.attributes.position, v = new V3(), s = k * 1.7 + 0.4;
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    const d = 1 + 0.24 * Math.sin(3.1 * v.x + s) * Math.sin(2.7 * v.y + 2 * s) * Math.sin(3.3 * v.z + 3 * s) + 0.09 * Math.sin(7.3 * v.x + 5 * s) * Math.sin(6.1 * v.z + s);
+    v.multiplyScalar(d); v.set(v.x * (1 + 0.15 * k % 0.4), v.y * 0.82, v.z * 0.74); p.setXYZ(i, v.x, v.y, v.z);
+  }
+  g.computeVertexNormals(); return g;
+});
+const rockMats = [srgb(0.4, 0.37, 0.34), srgb(0.33, 0.32, 0.31), srgb(0.46, 0.41, 0.35)].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.95, metalness: 0, flatShading: true, envMapIntensity: 0.15 }));
+const ROCKS = [];
+function rock(S, at, size, drift) {
+  const r = rand, m = new THREE.Mesh(rockGeos[Math.floor(r() * 5)], rockMats[Math.floor(r() * 3)]);
+  m.scale.setScalar(size); scene.add(m);
+  ROCKS.push({ S, m, at: at.clone(), drift: drift || new V3(), axis: new V3(r() - 0.5, r() - 0.5, r() - 0.5).normalize(), spin: 0.2 + r() * 0.5, phase: r() * 6 });
+}
+// the climb: some close by, drifting across, and more along the way up
+rock(SH.climb, new V3(-3, 3, -14), 0.9, new V3(-2.2, 0.3, 0.8));
+rock(SH.climb, new V3(18, 4, -36), 1.6, new V3(-1.2, 0.4, 2));
+rock(SH.climb, new V3(11, 13, -70), 2.2, new V3(-0.6, -0.4, 1.2));
+for (let i = 0; i < 10; i++) rock(SH.climb, new V3(-20 + rand() * 75, -2 + rand() * 30, -50 - rand() * 120), 0.8 + rand() * 2.4, new V3((rand() - 0.5) * 2, (rand() - 0.5), rand() * 2));
+// out beside the lanes and high in the corners, never among the gates
+for (const S of [SH.gates, SH.ties]) for (let i = 0; i < 16; i++) {
+  const side = i % 2 ? 1 : -1, z = -20 - rand() * 220;
+  rock(S, new V3(side * (24 + rand() * 50 + 0.25 * -z), i % 4 < 2 ? -6 + rand() * 14 : 18 + rand() * 30, z), 1.2 + rand() * 3.5, new V3(0, 0, 0));
+}
+
+// ---------- models ----------
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+// The models are stored scrambled (Tools/banner/lite_models.mjs), so none of the published files is a loose model file.
+const KEY = 0x6b2f91d7;
+async function unpack(url) {
+  const r = await fetch(url); if (!r.ok) throw new Error(url + ' ' + r.status);
+  const b = new Uint8Array(await r.arrayBuffer()); let x = KEY;
+  for (let i = 0; i < b.length; i++) { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; b[i] ^= x & 255; }
+  return b.buffer;
+}
+const load = url => unpack(url).then(buf => new Promise((res, rej) => loader.parse(buf, '', res, rej)));
+// Scale a model so its length (or height) is 1 and centre it; each shot then sizes it with obj.scale.
+function fit(root, by = 'xz') {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(root, true), dims = box.getSize(new V3()), c = box.getCenter(new V3());
+  const k = 1 / (by === 'y' ? dims.y : Math.max(dims.x, dims.z));
+  root.position.set(-c.x, -c.y, -c.z);
+  const holder = new THREE.Group(); holder.add(root); holder.scale.setScalar(k);
+  const outer = new THREE.Group(); outer.add(holder); scene.add(outer);
+  return { obj: outer, holder, dims: dims.multiplyScalar(k) };
+}
+const falcon = { obj: null, glow: null };
+const ties = [{ obj: null }, { obj: null }];
+// one Death Star for the station shot, a second, far off, behind the laps
+const stations = [{ obj: null, shots: [SH.station], at: new V3(30, 10, -480), r: 55 }, { obj: null, shots: [SH.gates, SH.ties], at: new V3(300, 70, -1500), r: 110 }];
+const shield = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 48), rimMaterial(srgb(0.45, 0.8, 1), 2.2, 1.0));
+shield.scale.setScalar(stations[0].r * 1.12); W(SH.station, 30, 10, -480, shield.position); scene.add(shield);
+
+// ---------- the gates: three rings, A B C, in the lane colours ----------
+const LANES = [-9, 0, 9], GATE_Z = -84, PICK = 1;
+const GATES = LANES.map((x, i) => {
+  const g = new THREE.Group();
+  const outerMat = new THREE.MeshBasicMaterial({ color: LANE[i].clone(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  const innerMat = outerMat.clone(); innerMat.opacity = 0.35;
+  const outer = new THREE.Mesh(new THREE.TorusGeometry(4.2, 0.13, 8, 72), outerMat);
+  const inner = new THREE.Mesh(new THREE.TorusGeometry(3.4, 0.05, 6, 72), innerMat);
+  const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: letterTex('ABC'[i], LANE[i]), transparent: true, depthWrite: false, toneMapped: false }));
+  tag.scale.setScalar(2.6); tag.position.y = 6.3;
+  g.add(outer, inner, tag); W(SH.gates, x, 0, GATE_Z, g.position); scene.add(g);
+  return { g, outer, inner, tag };
+});
+const gateFlash = new THREE.Sprite(additive(TEX.green)); gateFlash.visible = false; scene.add(gateFlash);
+
+// ---------- hyperspace: the stars are short lines that stretch into streaks ----------
+const WARP_N = 340, warpStars = [];
+const warpGeo = new LineSegmentsGeometry();
+{
+  const r = mulberry(91), pos = new Float32Array(WARP_N * 6), col = new Float32Array(WARP_N * 6);
+  for (let i = 0; i < WARP_N; i++) {
+    const a = r() * Math.PI * 2, rad = 18 + r() * 260;
+    warpStars.push(new V3(Math.cos(a) * rad, Math.sin(a) * rad * 0.75, -(110 + r() * 900)));
+    const c = new THREE.Color(0.6 + 0.4 * r(), 0.78 + 0.22 * r(), 1);
+    col.set([c.r, c.g, c.b, c.r * 0.5, c.g * 0.6, c.b * 0.9], i * 6);
+  }
+  warpGeo.setPositions(pos); warpGeo.setColors(col);
+}
+const warpMat = new LineMaterial({ linewidth: 2, vertexColors: true, transparent: true, depthWrite: false, toneMapped: false, worldUnits: false });
+const warp = new LineSegments2(warpGeo, warpMat); warp.frustumCulled = false; warp.position.copy(SH.jump.base); scene.add(warp);
+// a full-view veil: dark between shots, a white flash for the jump
+const veil = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ color: INK.clone(), transparent: true, opacity: 0, depthTest: false, depthWrite: false, fog: false, toneMapped: false }));
+veil.renderOrder = 999; veil.position.z = -0.5; camera.add(veil); scene.add(camera);
+
+// ---------- layout: the drawing follows the banner's real size ----------
+let wide = true, sizeW = 0, sizeH = 0;
+// Fit the drawing to the banner's real size. D2L can load the banner while the announcement is still folded
+// shut (no size yet) and open it later without telling the page, so this is checked on every frame too.
+function layout() {
+  const w = Math.round(document.documentElement.clientWidth || innerWidth), h = Math.round(document.documentElement.clientHeight || innerHeight);
+  if (w < 16 || h < 16) return false;   // not shown yet; keep checking
+  const ratio = Math.min(window.devicePixelRatio || 1, w * h > 900000 ? 1.25 : 1.75);
+  if (w === sizeW && h === sizeH && renderer.getPixelRatio() === ratio) return false;
+  sizeW = w; sizeH = h;
+  wide = w / h >= 1.25;
+  renderer.setPixelRatio(ratio);
+  renderer.setSize(w, h, false);
+  warpMat.resolution.set(w, h);
+  // the aim point sits right of centre beside the words, or low in the frame when the words are on top
+  const fw = wide ? w * 1.3 : w, fh = wide ? h : h * 1.55;
+  camera.setViewOffset(fw, fh, 0, 0, w, h);
+  camera.aspect = fw / fh;
+  const hfov = wide ? 62 : 50;
+  camera.fov = clamp(2 * Math.atan(Math.tan(hfov * Math.PI / 360) / camera.aspect) * 180 / Math.PI, 18, 78);
+  camera.updateProjectionMatrix();
+  return true;
+}
+
+// ---------- the shots ----------
+const _a = new V3(), _b = new V3(), _look = new V3(), _hero = new V3(), _tmp = new V3();
+const hudEl = document.getElementById('hud'), hudText = document.getElementById('hud-text');
+const gaugeEl = document.getElementById('gauge'), gaugeFill = document.getElementById('gauge-fill');
+let hudShown = '', gaugeShown = -1;
+function hud(text, kind = '', gauge = -1) {
+  if (text !== hudShown) { hudShown = text; hudText.textContent = text; }
+  hudEl.classList.toggle('alert', kind === 'alert'); hudEl.classList.toggle('good', kind === 'good');
+  if (gauge !== gaugeShown) { gaugeShown = gauge; gaugeEl.classList.toggle('on', gauge >= 0); if (gauge >= 0) gaugeFill.style.width = (gauge * 100).toFixed(1) + '%'; }
+}
+// the models face +Z; point one along a direction of travel, with a little bank
+function orientAlong(obj, vel, bank = 0) {
+  const yaw = Math.atan2(vel.x, vel.z), pitch = -Math.atan2(vel.y, Math.hypot(vel.x, vel.z));
+  obj.rotation.set(pitch, yaw, bank, 'YXZ');
+}
+function placeFalcon(S, pos, vel, size, bank = 0, glow = 1) {
+  if (!falcon.obj) return;
+  falcon.obj.visible = true; falcon.obj.position.copy(pos).add(S.base); falcon.obj.scale.setScalar(size);
+  orientAlong(falcon.obj, vel, bank);
+  if (falcon.glow) falcon.glow.material.opacity = glow;
+}
+// 1. The Falcon climbs away from the forest moon past tumbling asteroids; the camera trails and tilts up after it.
+function climbAt(u, out) { return out.set(3 + 2.4 * u, -4.5 + 3.2 * u, -30 - 8 * u - 1.6 * u * u); }
+function shotClimb(S, u) {
+  climbAt(u, _a); climbAt(u + 0.05, _b);
+  placeFalcon(S, _a, _b.sub(_a), 5, -0.25 + 0.12 * Math.sin(u * 1.4), 0.85 + 0.15 * Math.sin(u * 31));
+  W(S, 0.3 * u, 0.7 * u, 0, camera.position);
+  _look.copy(_a).add(S.base).add(_tmp.set(0, 1 + 0.6 * u, 0));
+  hud('PYRUVATE IS ABOARD');
+  return _hero.copy(_a).add(S.base);
+}
+// 2. The Death Star ahead: sunlit on one half, window lights on the other. Its shield flickers twice and goes out.
+const SHIELD_OFF = 2.0;
+function shieldLevel(u) {
+  if (u >= SHIELD_OFF + 0.35) return 0;
+  const flick = (u > 1.15 && u < 1.27) || (u > 1.55 && u < 1.62) || (u > 1.8 && u < 1.86) ? 0.12 : 1;
+  return flick * (1 - smooth(SHIELD_OFF, SHIELD_OFF + 0.35, u)) * (0.92 + 0.08 * Math.sin(u * 19));
+}
+function shotStation(S, u) {
+  const st = stations[0];
+  _a.set(1.5, -1.6, -19 - 5.5 * u);
+  _b.copy(st.at).sub(_a);
+  placeFalcon(S, _a, _b, 5, 0.08 * Math.sin(u * 1.1));
+  shield.visible = true; shield.material.uniforms.uStrength.value = 1.0 * shieldLevel(u);
+  W(S, -0.4 * u, 0.3 * u, 0, camera.position);
+  _look.copy(st.at).lerp(_a, 0.3).add(S.base);
+  hud(u < SHIELD_OFF + 0.2 ? 'DEATH STAR SHIELD UP' : 'THE SHIELD IS DOWN', u < SHIELD_OFF + 0.2 ? 'alert' : '');
+  return _hero.copy(st.at).add(S.base);
+}
+// 3. A gate on a lap: the Falcon lines up with gate B and flies through it; it flashes green and the NADH gauge fills.
+const GATE_SPEED = 23, PASS = -GATE_Z / GATE_SPEED;
+function shipX(u) { return lerp(LANES[0], LANES[PICK], smooth(0.5, 1.5, u)); }
+function shotGates(S, u) {
+  const x = shipX(u), z = -GATE_SPEED * u;
+  _a.set(x, 0.15 * Math.sin(u * 2.2), z);
+  const slide = (shipX(u + 0.05) - x) / 0.05;
+  placeFalcon(S, _a, _tmp.set(0, 0, -1), 3.6, -0.025 * slide, 0.9 + 0.1 * Math.sin(u * 29));
+  const passed = u >= PASS, f = u - PASS;
+  GATES.forEach((G, i) => {
+    G.g.visible = true;
+    const fade = i === PICK ? 1 : 1 - smooth(PASS - 0.6, PASS + 0.2, u);
+    G.outer.material.color.copy(i === PICK && passed ? GREEN : LANE[i]);
+    G.outer.material.opacity = fade * (i === PICK && passed ? 1 : 0.95);
+    G.inner.material.color.copy(G.outer.material.color); G.inner.material.opacity = 0.35 * fade;
+    G.tag.material.opacity = fade * (1 - smooth(PASS - 0.8, PASS - 0.3, u));
+    G.outer.scale.setScalar(i === PICK && passed ? 1 + 0.25 * smooth(0, 0.4, f) : 1);
+  });
+  gateFlash.visible = passed && f < 0.7;
+  if (gateFlash.visible) { W(S, LANES[PICK], 0, GATE_Z, gateFlash.position); gateFlash.scale.setScalar(5 + 9 * smooth(0, 0.35, f)); gateFlash.material.opacity = 0.75 * (1 - smooth(0.1, 0.7, f)); }
+  // the camera slides with the ship, as in the game
+  W(S, x, 1.6, z + 18, camera.position);
+  W(S, x, 0.3, z - 40, _look);
+  const lined = u >= 1.5;
+  hud(passed ? 'GATE B  ·  CORRECT  ·  NADH +1' : lined ? 'GATE B LINED UP' : 'LAP 1  ·  LINE UP WITH A GATE', passed ? 'good' : '', 0.33 + 0.34 * smooth(PASS + 0.05, PASS + 0.6, u));
+  return _hero.copy(_a).add(S.base);
+}
+// 4. Two TIE fighters streak across, low and ahead, as they do between legs in the game.
+const TIE_AT = 0.35, TIE_DUR = 2.3;
+function shotTies(S, u) {
+  const z = -GATE_SPEED * 0.8 * u;
+  _a.set(0, 0.15 * Math.sin(u * 2.2), z);
+  placeFalcon(S, _a, _tmp.set(0, 0, -1), 3.6, 0.05 * Math.sin(u * 1.7), 0.9 + 0.1 * Math.sin(u * 29));
+  ties.forEach((T, k) => {
+    if (!T.obj) return;
+    const f = (u - TIE_AT - k * 0.16) / TIE_DUR;
+    T.obj.visible = f > -0.05 && f < 1.05;
+    if (!T.obj.visible) return;
+    const from = _b.set(34, k ? 3.4 : -2.4, z - 12 - k * 5), to = _tmp.set(-36, k ? 3.0 : -2.0, z - 20 - k * 5);
+    T.obj.position.lerpVectors(from, to, f).add(S.base); T.obj.scale.setScalar(3.6);
+    orientAlong(T.obj, to.sub(from), 0.3 * (k ? -1 : 1));
+  });
+  W(S, 0, 1.6, z + 18, camera.position);
+  W(S, 0, 0.3, z - 40, _look);
+  hud('LAP 3  ·  THE BLOCKADES', u > TIE_AT - 0.2 && u < TIE_AT + TIE_DUR + 0.2 ? 'alert' : '');
+  return _hero.copy(_a).add(S.base);
+}
+// 5. The jump: the stars stretch into streaks as the Falcon gathers speed; it leaps away in a flash and they stream past.
+const JUMP_AT = 2.0;
+function shotJump(S, u) {
+  const gather = smooth(0.3, JUMP_AT, u), after = smooth(JUMP_AT, JUMP_AT + 0.3, u);
+  const length = lerp(1.5, 140, gather * gather) + 260 * after, run = 900 * Math.max(0, u - JUMP_AT);
+  const arr = warpGeo.attributes.instanceStart.data.array;
+  for (let i = 0; i < WARP_N; i++) {
+    const s = warpStars[i];
+    const d = 40 + ((((-s.z - 40 - run) % 1000) + 1000) % 1000), z = -d;   // wraps round once a star passes the camera
+    arr.set([s.x, s.y, z, s.x, s.y, z + length], i * 6);
+  }
+  warpGeo.attributes.instanceStart.data.needsUpdate = true;
+  warp.visible = true; sky.visible = false;
+  const leap = clamp((u - JUMP_AT) / 0.45, 0, 1);
+  _a.set(0, -1.1 + 0.15 * Math.sin(u * 1.3), -(9 + 30 * gather + 900 * leap * leap));
+  if (leap < 1) placeFalcon(S, _a, _tmp.set(0, 0, -1), 4, 0, 1);
+  if (falcon.obj) falcon.obj.rotation.x = 0.035 * gather;
+  const shake = u > JUMP_AT && u < JUMP_AT + 0.5 ? (1 - (u - JUMP_AT) / 0.5) * 0.25 : 0;
+  W(S, shake * Math.sin(u * 71), 0.6 + shake * Math.sin(u * 53), 8, camera.position);
+  W(S, 0, -0.4, -60, _look);
+  hud(u < JUMP_AT ? 'THE CYCLE IS COMPLETE' : 'JUMP TO HYPERSPACE', u < JUMP_AT ? 'good' : '');
+  return W(S, 0, -1.1, -40, _hero);
+}
+const SHOT_FN = { climb: shotClimb, station: shotStation, gates: shotGates, ties: shotTies, jump: shotJump };
+
+// ---------- one frame, as a function of the clock ----------
+let simT = 0;
+const _ndc = new V3(), _white = srgb(1, 0.97, 0.92);
+function step(dt) {
+  simT += dt;
+  const t = ((simT % LOOP) + LOOP) % LOOP;
+  const S = SHOTS.find(s => t >= s.start && t < s.start + s.dur) || SHOTS[0], u = t - S.start;
+  // only the current shot's things are shown
+  if (falcon.obj) falcon.obj.visible = false;
+  ties.forEach(T => { if (T.obj) T.obj.visible = false; });
+  stations.forEach(st => { if (!st.obj) return; st.obj.visible = st.shots.includes(S); if (st.obj.visible) st.obj.position.copy(st.at).add(S.base); });
+  shield.visible = false; GATES.forEach(G => { G.g.visible = false; }); gateFlash.visible = false;
+  moon.visible = moonAir.visible = S.name === 'climb';
+  warp.visible = false; sky.visible = true;
+  for (const R of ROCKS) {
+    R.m.visible = R.S === S;
+    if (!R.m.visible) continue;
+    R.m.position.copy(R.at).addScaledVector(R.drift, u).add(S.base);
+    R.m.quaternion.setFromAxisAngle(R.axis, R.phase + R.spin * t);
+  }
+  const hero = SHOT_FN[S.name](S, u);
+  camera.lookAt(_look);
+  // keep the action clear of the words: turn the camera a little whenever the hero drifts toward them
+  camera.updateMatrixWorld();
+  _ndc.copy(hero).project(camera);
+  const lo = wide ? 0.12 : -0.7, hi = wide ? 0.9 : 0.7, ylo = wide ? -0.8 : -0.95, yhi = wide ? 0.8 : -0.3;
+  const ex = _ndc.x < lo ? lo - _ndc.x : _ndc.x > hi ? hi - _ndc.x : 0, ey = _ndc.y < ylo ? ylo - _ndc.y : _ndc.y > yhi ? yhi - _ndc.y : 0;
+  if (_ndc.z < 1 && (ex || ey)) {
+    const hx = Math.atan(Math.tan(camera.fov * Math.PI / 360) * camera.aspect) * (camera.view ? camera.view.width / camera.view.fullWidth : 1);
+    const hy = camera.fov * Math.PI / 360 * (camera.view ? camera.view.height / camera.view.fullHeight : 1);
+    camera.rotateOnWorldAxis(Y, ex * hx);
+    camera.rotateX(-ey * hy);
+    camera.updateMatrixWorld();
+  }
+  sky.position.copy(camera.position);
+  // dark between shots; a white flash for the jump
+  const edge = Math.min(u, S.dur - u), cut = 1 - smooth(0, 0.35, edge);
+  const white = S.name === 'jump' ? Math.max(0, 1 - Math.abs(u - JUMP_AT - 0.05) / 0.25) * 0.85 : 0;
+  veil.material.color.copy(white > cut ? _white : INK);
+  veil.material.opacity = Math.max(cut, white);
+}
+
+// ---------- load, then run ----------
+layout();
+const relayout = () => { if (layout() && !running && document.body.classList.contains('live')) { step(0); renderer.render(scene, camera); } };
+addEventListener('resize', relayout);
+if ('ResizeObserver' in window) new ResizeObserver(relayout).observe(document.documentElement);
+const ready = Promise.all([
+  load('falcon.bin').then(gltf => {
+    const { obj, dims } = fit(gltf.scene);
+    const glow = new THREE.Sprite(additive(TEX.blue, 0x9fdcff));
+    glow.position.set(0, 0.01, -dims.z / 2 - 0.02); glow.scale.set(dims.x * 0.75, dims.y * 1.3, 1);
+    obj.add(glow); falcon.glow = glow; falcon.obj = obj; obj.visible = false;
+  }),
+  load('tie.bin').then(gltf => {
+    // opaque, as in the game (its map's alpha would leave the wing panels see-through)
+    gltf.scene.traverse(o => { if (o.isMesh) { o.material.transparent = false; o.material.alphaTest = 0; o.material.depthWrite = true; o.material.side = THREE.DoubleSide; } });
+    ties.forEach((T, i) => { T.obj = fit(i ? gltf.scene.clone(true) : gltf.scene).obj; T.obj.visible = false; });
+  }),
+  load('deathstar.bin').then(gltf => {
+    const root = gltf.scene;
+    // The window lights shine only on the night side, and fade out where the sun reaches, as in the game's DeathStar.shader.
+    const uSun = { value: SUN.clone() };
+    root.traverse(o => {
+      if (!o.isMesh) return;
+      const m = o.material; m.envMapIntensity = 0.05;
+      if (m.emissiveMap) {
+        m.emissive.copy(srgb(1, 0.94, 0.82)); m.emissiveIntensity = 1.8;
+        m.onBeforeCompile = sh => {
+          sh.uniforms.uSun = uSun;
+          sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vBall;')
+            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBall = normalize(mat3(modelMatrix) * position);');
+          sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vBall;\nuniform vec3 uSun;')
+            .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 1.0 - smoothstep(-0.2, 0.08, dot(normalize(vBall), uSun));');
+        };
+      }
+    });
+    // the dish faces up and to the left, on the sunlit side, as in the game
+    stations.forEach((st, i) => {
+      const { obj, holder } = fit(i ? root.clone(true) : root);
+      obj.scale.setScalar(st.r * 2); obj.position.copy(st.at).add(st.shots[0].base);
+      let part = null; holder.traverse(o => { if (!part && o.isMesh && /^Dish$/.test(o.name)) part = o; });
+      if (part) {
+        obj.updateMatrixWorld(true);
+        const c = new THREE.Box3().setFromObject(part).getCenter(new V3()).sub(obj.position).normalize();
+        obj.quaternion.setFromUnitVectors(c, new V3(-0.5, 0.55, 0.67).normalize());
+      }
+      obj.visible = false; st.obj = obj;
+    });
+  }),
+]);
+let last = 0, running = false, visible = true, raf = 0;
+function frame(now) {
+  raf = 0;
+  if (!running) return;
+  const dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now;
+  layout();
+  try { step(dt); renderer.render(scene, camera); } catch (err) { console.error(err); }   // one bad frame never stops the show
+  raf = requestAnimationFrame(frame);
+}
+function setRunning(on) {
+  on = on && visible && !document.hidden && !STILL && !CAPTURE;
+  if (on === running) return;
+  running = on;
+  if (on) { last = performance.now(); if (!raf) raf = requestAnimationFrame(frame); }
+}
+const STILL_AT = SH.gates.start + 1.9;   // the still picture: the Falcon lined up with gate B, the Death Star beyond
+const START = +(params.get('t') || (STILL ? STILL_AT : 0));
+ready.then(() => {
+  simT = START; step(0);
+  renderer.compile(scene, camera);
+  renderer.render(scene, camera);
+  document.body.classList.add('live'); document.body.classList.remove('poster');
+  if (!STILL && !CAPTURE) setRunning(true);
+  // pause whenever the banner is scrolled out of view or the tab is hidden, to spare laptops
+  if ('IntersectionObserver' in window) new IntersectionObserver(es => { visible = es[es.length - 1].isIntersecting; relayout(); setRunning(true); }).observe(canvas);
+  document.addEventListener('visibilitychange', () => setRunning(true));
+}).catch(err => { console.error(err); document.body.classList.add('poster'); });
+
+if (CAPTURE) {
+  // for recording a preview: advance the clock in fixed steps, then draw
+  const ndc = p => { const v = p.clone().project(camera); return [+v.x.toFixed(2), +v.y.toFixed(2)]; };
+  window.__banner = { ready, loop: LOOP, still: STILL_AT,
+    advance(sec, fps = 30, draw = true) { const n = Math.round(sec * fps); for (let i = 0; i < n; i++) step(1 / fps); if (draw) { layout(); step(0); renderer.render(scene, camera); } return simT; },
+    seek(t) { simT = t; layout(); step(0); renderer.render(scene, camera); return simT; },
+    time: () => simT,
+    proj: () => { const t = ((simT % LOOP) + LOOP) % LOOP, S = SHOTS.find(s => t >= s.start && t < s.start + s.dur) || SHOTS[0]; return { t: +t.toFixed(2), shot: S.name, hero: ndc(SHOT_FN[S.name](S, t - S.start)) }; },
+    size: () => ({ css: [sizeW, sizeH], buffer: [renderer.domElement.width, renderer.domElement.height] }) };
+}
+</script>
+</body>
+</html>
