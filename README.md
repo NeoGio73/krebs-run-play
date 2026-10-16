@@ -9,6 +9,6 @@ This repository holds only the finished web build that the site serves: the game
 
 ## Credits
 
-The Millennium Falcon model was supplied by the course author. Planets, the station and the effects are drawn in code. Sound is synthesized in the game; there is no recorded film audio or music. The Inter typeface is used under the SIL Open Font License.
+The Millennium Falcon, Death Star and TIE fighter models were supplied by the course author; the Death Star's and TIE fighter's downloads did not record an author or licence. Planets, asteroids and the effects are drawn in code. Sound is synthesized in the game; there is no recorded film audio or music. The Inter typeface is used under the SIL Open Font License.
 
 This is an unofficial fan learning game. Star Wars names and designs belong to their respective rights holders; the game is not affiliated with Lucasfilm or Disney.

@@ -4,6 +4,15 @@ The Millennium Falcon 3D model was supplied by the course author. Its geometry a
 converted and optimized for browser display; see Assets/FalconSource/README.txt in the editable
 Unity project. No broader license or ownership claim is made for the supplied model.
 
+The Death Star 3D model (death-star-star-wars.zip) was supplied by the course author in October 2026.
+The game uses its hull, dish and window-light map, made lighter for the browser; its author and licence
+were not recorded in the download.
+
+The TIE fighter 3D model was supplied by the course author for The Carbon Rebellion (tie.zip). Its
+author and licence were not recorded in the download.
+
+The asteroids are drawn in code.
+
 This is an unofficial fan learning game. Star Wars names and designs belong to their respective
 rights holders. The game is not affiliated with Lucasfilm or Disney. Game audio is originally
 synthesized, not recorded film audio.
