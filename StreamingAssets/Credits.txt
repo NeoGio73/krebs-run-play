@@ -1,0 +1,12 @@
+THE KREBS RUN - CREDITS AND NOTICES
+
+The Millennium Falcon 3D model was supplied by the course author. Its geometry and textures were
+converted and optimized for browser display; see Assets/FalconSource/README.txt in the editable
+Unity project. No broader license or ownership claim is made for the supplied model.
+
+This is an unofficial fan learning game. Star Wars names and designs belong to their respective
+rights holders. The game is not affiliated with Lucasfilm or Disney. Game audio is originally
+synthesized, not recorded film audio.
+
+Biochemistry names and values follow Nelson and Cox, Lehninger Principles of Biochemistry.
+The Inter typeface is used under the SIL Open Font License (Inter-LICENSE.txt).
