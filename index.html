@@ -4,7 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#050b16">
-  <title>The Krebs Run · Browser Practice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap">
+  <title>The Krebs Run</title>
   <style>
     :root{color-scheme:dark;--ink:#050b16;--panel:#0b1728;--line:#223a51;--cyan:#52e9e0;--gold:#f4c36a;--muted:#a6bccf}
     *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--ink);color:#f3f9ff;font-family:Arial,Helvetica,sans-serif}
@@ -24,6 +27,22 @@
     footer{flex:none;padding:7px 18px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);line-height:1.4;text-align:center}
     @media(max-width:720px){header{padding:10px 12px;gap:9px}.identity{flex-basis:100%}.brand{font-size:10px}.toolbar{gap:6px}button{font-size:11px;padding:9px}.load-card h1{font-size:34px}.cycle{display:none}.eyebrow{margin-top:0}footer{font-size:10px}}
     @media(prefers-reduced-motion:reduce){.progress span{transition:none}}
+    /* The completion certificate panel (certificate.js), laid out in the game's own 1600 x 1000 coordinates and scaled with the canvas,
+       exactly as in The Battle of Embden. */
+    #cert-layer{position:absolute;left:0;top:0;width:1600px;height:1000px;transform-origin:0 0;pointer-events:none;font-family:Inter,"Segoe UI",Arial,sans-serif;color:#e0f0f5}
+    #cert-layer>*{position:absolute;pointer-events:auto;box-sizing:border-box}
+    #cert-head{left:752px;top:358px;font-weight:700;font-size:15px;line-height:1;letter-spacing:.14em;color:#3bdbeb}
+    #cert-intro{left:752px;top:388px;width:536px;font-size:17px;line-height:1.42;margin:0}
+    #cert-name{left:752px;top:470px;width:290px;height:52px;padding:0 14px;font:600 20px Inter,"Segoe UI",Arial,sans-serif;color:#fff;background:rgba(59,219,235,.07);border:1px solid rgba(59,219,235,.42);border-radius:3px;outline:none}
+    #cert-name::placeholder{color:#6f8b96}#cert-name:focus{border-color:#3bdbeb;box-shadow:0 0 0 2px rgba(59,219,235,.25)}#cert-name:disabled{opacity:.42}
+    #cert-btn{left:752px;top:534px;width:290px;height:52px;padding:0;font:800 17px Inter,"Segoe UI",Arial,sans-serif;letter-spacing:.06em;color:#061018;background:#ffc24d;border:0;border-radius:3px;white-space:nowrap}
+    #cert-btn:hover{background:#ffd27a}#cert-btn:disabled{opacity:.38;background:#ffc24d}#cert-btn:focus-visible{outline:3px solid #3bdbeb;outline-offset:3px}
+    #cert-status{left:752px;top:600px;width:290px;font-size:15px;line-height:1.42;color:#8fb3bf}#cert-status.ok{color:#57e0a6}#cert-status.warn{color:#ffc24d}
+    #cert-preview{left:1062px;top:470px;width:226px;height:175px;border:1px solid #24465a;background:#03080c;-webkit-touch-callout:default}
+    #cert-lock{left:1062px;top:470px;width:226px;height:175px;border:1px dashed #2f5366;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:#6f8b96;font-size:13px;line-height:1.35;padding:0 18px}
+    #cert-lock b{font-size:15px;letter-spacing:.16em;color:#8fb3bf}
+    #cert-code{left:1062px;top:656px;width:226px;text-align:center;font-weight:700;font-size:16px;letter-spacing:.12em;color:#ffc24d}
+    #cert-tip{left:1062px;top:684px;width:226px;text-align:center;font-size:13px;line-height:1.35;color:#8fb3bf}
   </style>
 </head>
 <body>
@@ -44,17 +63,28 @@
     <div id="loading" aria-live="polite">
       <div class="load-card">
         <div class="cycle" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="36" stroke="currentColor" stroke-width="2"/><g fill="currentColor"><circle cx="75.5" cy="24.5" r="5"/><circle cx="86" cy="50" r="5"/><circle cx="75.5" cy="75.5" r="5"/><circle cx="50" cy="86" r="5"/><circle cx="24.5" cy="75.5" r="5"/><circle cx="14" cy="50" r="5"/><circle cx="24.5" cy="24.5" r="5"/></g><circle cx="50" cy="14" r="6.5" fill="#f4c36a"/></svg></div>
-        <div class="eyebrow">BROWSER PRACTICE · THE CITRIC ACID CYCLE</div>
+        <div class="eyebrow">THE CITRIC ACID CYCLE · EXTRA CREDIT</div>
         <h1>THE KREBS<br><span>RUN</span></h1>
         <p>Eight stations. One closed circuit.<br>Fly it until you know it cold.</p>
         <div class="progress" role="progressbar" aria-label="Loading game" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="progress-fill"></span></div>
         <div id="loading-label">PREPARING YOUR SHIP</div>
         <div id="load-error" role="alert" hidden></div><button id="retry" type="button" hidden>Reload game</button>
-        <p class="fine">Autosave stays in this browser profile.<br>Download a save to keep a backup or change computers.</p>
+        <p class="fine">Extra credit: clear all 58 gates in one visit,<br>then download your certificate at the end.</p>
       </div>
     </div>
+    <div id="cert-layer" hidden>
+      <div id="cert-head">EXTRA CREDIT &nbsp;•&nbsp; COMPLETION CERTIFICATE</div>
+      <p id="cert-intro">Type your first and last name as it appears in D2L, then download your certificate (a PNG picture) and upload it to the D2L assignment folder.</p>
+      <input id="cert-name" type="text" maxlength="60" autocomplete="name" spellcheck="false" placeholder="First and last name" aria-label="Your name for the certificate">
+      <button id="cert-btn" type="button" disabled>DOWNLOAD CERTIFICATE</button>
+      <div id="cert-status" role="status" aria-live="polite"></div>
+      <img id="cert-preview" alt="Preview of your completion certificate" hidden>
+      <div id="cert-lock" hidden><b>LOCKED</b>All 58 gates in one visit unlock the certificate.</div>
+      <div id="cert-code"></div>
+      <div id="cert-tip" hidden></div>
+    </div>
   </main>
-  <footer>Ungraded practice · Saves belong to this browser profile, not your D2L account. On shared computers, load your own save. Press Esc to see save controls.</footer>
+  <footer>Extra credit: clear all 58 gates in one visit, then download your certificate on the completion screen. Progress also saves in this browser for practice. Press Esc to see the controls.</footer>
   <dialog id="message-dialog" aria-labelledby="message-title"><h2 id="message-title"></h2><p id="message-body"></p><form method="dialog"><button>Close message</button></form></dialog>
   <dialog id="import-dialog" aria-labelledby="import-title">
     <h2 id="import-title">Load this flight record?</h2><p id="import-summary"></p>
@@ -64,6 +94,7 @@
   </dialog>
   <script src="browser-save.js"></script>
   <script src="embden-handoff.js"></script>
+  <script src="certificate.js"></script>
   <script>window.KREBS_BUILD_FILES = {"loaderUrl":"Build/Web.loader.js","dataUrl":"Build/Web.data.unityweb","frameworkUrl":"Build/Web.framework.js.unityweb","codeUrl":"Build/Web.wasm.unityweb","streamingAssetsUrl":"StreamingAssets"};</script>
   <script src="browser-shell.js"></script>
 </body>
