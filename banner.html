@@ -6,8 +6,9 @@
 <title>The Krebs Run · Extra Credit</title>
 <meta name="description" content="Animated banner for The Krebs Run, an extra-credit citric acid cycle game.">
 <!-- Models, lightened for the web: the Millennium Falcon, the Death Star and the TIE fighter, all supplied by the course author
-     (the Death Star's and TIE fighter's downloads did not record an author or licence). The forest moon, asteroids, gates and
-     effects are drawn in code. three.js (MIT). Unofficial fan learning game, not affiliated with Lucasfilm or Disney. -->
+     (the Death Star's and TIE fighter's downloads did not record an author or licence). The forest moon, asteroids, gates,
+     the Death Star's trench (plated with that model's own hull maps) and the effects are drawn in code. three.js (MIT).
+     Unofficial fan learning game, not affiliated with Lucasfilm or Disney. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap">
@@ -158,6 +159,9 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1;
 const scene = new THREE.Scene();
 scene.background = INK.clone();
+// haze only in the trench, where it swallows the far end; everywhere else it starts far beyond anything drawn
+const FOG_OFF = [1e5, 2e5], FOG_TRENCH = [130, 700];
+scene.fog = new THREE.Fog(INK.clone(), FOG_OFF[0], FOG_OFF[1]);
 const camera = new THREE.PerspectiveCamera(30, 2, 0.3, 4000);
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -185,6 +189,7 @@ const TEX = {
   blue: radial([[0, 'rgba(230,248,255,1)'], [0.3, 'rgba(120,205,255,0.7)'], [1, 'rgba(0,0,0,0)']], 64),
   green: radial([[0, 'rgba(235,255,245,1)'], [0.3, 'rgba(87,224,166,0.7)'], [1, 'rgba(0,0,0,0)']], 64),
   star: radial([[0, 'rgba(255,255,255,1)'], [0.35, 'rgba(220,235,255,0.7)'], [1, 'rgba(0,0,0,0)']], 32),
+  red: radial([[0, 'rgba(255,225,210,1)'], [0.35, 'rgba(255,70,45,0.65)'], [1, 'rgba(0,0,0,0)']], 64),
 };
 const additive = (map, color = 0xffffff) => new THREE.SpriteMaterial({ map, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false, fog: false });
 // The forest moon: deep green forest with darker ridges, a few lakes, and swirls of cloud.
@@ -208,15 +213,17 @@ function rimMaterial(color, power, strength) {
 }
 
 // ---------- the shots ----------
-// Five places in one stretch of space, one for each shot, far apart. Each is laid out in its own frame: the camera near the
+// Six places in one stretch of space, one for each shot, far apart. Each is laid out in its own frame: the camera near the
 // origin, looking down -Z. The order is the game's: the climb from the moon (the opening), the Death Star's shield going
-// down, a gate on a lap of the cycle, the TIE fighters, and the jump to hyperspace (the ending).
+// down, a gate on a lap of the cycle, the TIE fighters, the run down the Death Star's trench (the escape), and the jump to
+// hyperspace (the ending).
 const SHOTS = [
-  { name: 'climb', base: new V3(0, 0, 0), dur: 4.2 },
-  { name: 'station', base: new V3(6000, 0, 0), dur: 3.4 },
-  { name: 'gates', base: new V3(12000, 0, 0), dur: 5.4 },
-  { name: 'ties', base: new V3(18000, 0, 0), dur: 3.0 },
-  { name: 'jump', base: new V3(24000, 0, 0), dur: 4.0 },
+  { name: 'climb', base: new V3(0, 0, 0), dur: 4.0 },
+  { name: 'station', base: new V3(6000, 0, 0), dur: 3.2 },
+  { name: 'gates', base: new V3(12000, 0, 0), dur: 5.2 },
+  { name: 'ties', base: new V3(18000, 0, 0), dur: 2.8 },
+  { name: 'trench', base: new V3(30000, 0, 0), dur: 5.8 },
+  { name: 'jump', base: new V3(24000, 0, 0), dur: 3.8 },
 ];
 let acc = 0; for (const S of SHOTS) { S.start = acc; acc += S.dur; }
 const LOOP = acc;
@@ -330,6 +337,82 @@ const warpGeo = new LineSegmentsGeometry();
 }
 const warpMat = new LineMaterial({ linewidth: 2, vertexColors: true, transparent: true, depthWrite: false, toneMapped: false, worldUnits: false });
 const warp = new LineSegments2(warpGeo, warpMat); warp.frustumCulled = false; warp.position.copy(SH.jump.base); scene.add(warp);
+// ---------- the Death Star's trench, built as in the game (KrebsGame.Escape.cs) ----------
+// 56-unit sections of plated boxes: one wrap of the plating band (the supplied Death Star's own hull maps, trench_*.bin) per
+// section, so the sections join without a seam; walls carry the band's stacked rows from floor to rim. The trench runs down
+// -Z and follows the Death Star's curve, dropping away ahead.
+const TR = { L: 56, R: 4000, lanes: [-7, 0, 7], speed: 70, group: new THREE.Group(), mats: null, towers: [], rings: [], bolts: [], flashes: [], scorches: [] };
+TR.group.position.copy(SH.trench.base); scene.add(TR.group);
+const trenchCurve = p => -p * p / (2 * TR.R), trenchTilt = p => -Math.atan(p / TR.R);
+function trenchPoint(p, x, h, out = new V3()) { return out.set(x, trenchCurve(p) + h, -p).add(SH.trench.base); }
+// the floor itself: each straight section starts on the curve and runs on at its starting slope
+function trenchFloor(p, x, h, out = new V3()) { const p0 = Math.floor(p / TR.L) * TR.L; return out.set(x, trenchCurve(p0) + (p - p0) * Math.sin(trenchTilt(p0)) + h, -p).add(SH.trench.base); }
+class Boxes {
+  constructor(n) { this.pos = []; this.nor = []; this.uv = []; this.idx = Array.from({ length: n }, () => []); }
+  quad(c, nn, du, dw, m) {
+    const at = this.pos.length / 3, P = [c.clone().sub(du).sub(dw), c.clone().add(du).sub(dw), c.clone().add(du).add(dw), c.clone().sub(du).add(dw)];
+    for (const q of P) {
+      this.pos.push(q.x, q.y, q.z); this.nor.push(nn.x, nn.y, nn.z);
+      const ax = Math.abs(nn.x), ay = Math.abs(nn.y);
+      if (ax > 0.5) this.uv.push(q.z / TR.L, q.y / 14); else if (ay > 0.5) this.uv.push(q.z / TR.L, q.x / 24); else this.uv.push(q.x / 24, q.y / 14);
+    }
+    const n = new V3().subVectors(P[1], P[0]).cross(new V3().subVectors(P[2], P[0]));
+    if (n.dot(nn) > 0) this.idx[m].push(at, at + 1, at + 2, at, at + 2, at + 3); else this.idx[m].push(at, at + 2, at + 1, at, at + 3, at + 2);
+  }
+  box(cx, cy, cz, sx, sy, sz, m) {
+    const c = new V3(cx, cy, cz), h = new V3(sx / 2, sy / 2, sz / 2);
+    for (const nn of [new V3(1, 0, 0), new V3(-1, 0, 0), new V3(0, 1, 0), new V3(0, -1, 0), new V3(0, 0, 1), new V3(0, 0, -1)]) {
+      const u = Math.abs(nn.y) > 0.5 ? new V3(1, 0, 0) : new V3(0, 1, 0), w = new V3().crossVectors(nn, u);
+      this.quad(c.clone().add(nn.clone().multiply(h)), nn, u.multiply(h), w.multiply(h), m);
+    }
+  }
+  geometry() {
+    const g = new THREE.BufferGeometry(), all = [];
+    g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(this.nor, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(this.uv, 2));
+    this.idx.forEach((list, m) => { g.addGroup(all.length, list.length, m); all.push(...list); });
+    g.setIndex(all); g.computeBoundingSphere(); return g;
+  }
+}
+function trenchSection(seed) {
+  const r = mulberry(seed), R = (a, b) => a + r() * (b - a), b = new Boxes(4), L = TR.L;
+  b.box(0, -0.5, L / 2, 24, 1, L + 0.2, 1);                                   // the floor
+  for (let l = 0; l < 5; l++) b.box(0, 0.02, 5 + l * 11, 0.5, 0.06, 2.5, 3);   // guide lights down the middle
+  for (let l = 0; l < 7; l++) b.box(0, 0.01, l * 8, 24, 0.04, 0.35, 2);        // seams across the floor
+  for (const s of [-1, 1]) {
+    b.box(s * 13, 7, L / 2, 2, 14, L + 0.2, 0);                                // the walls
+    b.box(s * 10.9, 0.12, L / 2, 1.6, 0.24, L + 0.2, 2);                       // gutters
+    b.box(s * 214, 13.5, L / 2, 400, 1, L + 0.2, 1);                           // the surface either side
+    b.box(s * 13.6, 14.4, L / 2, 3.2, 0.8, L + 0.2, 2);                        // the lip along the rim
+    for (const y of [3.4, 7.2, 10.8]) b.box(s * (12 - 0.42), y, L / 2, 0.84, 0.45, L + 0.2, r() < 0.5 ? 1 : 2);   // ledges
+    for (let z = R(1, 4); z < L - 0.5; z += R(5.5, 9)) b.box(s * (12 - 0.26), 6.9, z, 0.52, 13.4, 0.7, 1);       // ribs
+    for (let g = 0; g < 20; g++) { const d = R(0.25, 1.1); b.box(s * (12 - d / 2), R(1.5, 12.8), R(1.5, L - 1.5), d, R(0.6, 2.8), R(1.2, 6), r() < 0.33 ? 1 : 2); }
+    for (let g = 0; g < 5; g++) { const y = R(2, 12), z = R(2, L - 4); for (let k = 0; k < 4; k++) b.box(s * (12 - 0.18), y + k * 0.32, z, 0.36, 0.14, 2.2, 2); }   // vents
+    for (let w = 0; w < 12; w++) b.box(s * 11.97, R(1.8, 12.6), R(1, L - 1), 0.08, 0.2, R(0.3, 0.75), 3);   // lights in the wall
+    for (let g = 0; g < 40; g++) { const x = s * R(16, 160), h = R(0.5, 6), w = R(1.5, 10), dd = R(1.5, 10); b.box(x, 14 + h / 2, R(dd / 2, L - dd / 2), w, h, dd, Math.floor(r() * 3)); }
+    for (let g = 0; g < 2; g++) { const x = s * R(34, 220), h = R(8, 22), w = R(3, 8), z = R(w, L - w); b.box(x, 14 + h / 2, z, w, h, w, Math.floor(r() * 2)); b.box(x, 14 + h + 0.6, z, w * 1.6, 1.2, w * 1.6, 2); }
+  }
+  return b.geometry();
+}
+// the towers that fire, and what their shots leave behind
+const greenCore = new THREE.MeshBasicMaterial({ color: srgb(0.85, 1, 0.85), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false });
+const greenHalo = new THREE.MeshBasicMaterial({ color: srgb(0.3, 1, 0.4), transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false });
+const ringMat = new THREE.MeshBasicMaterial({ color: srgb(1, 0.25, 0.2), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide, fog: false });
+const glowRed = new THREE.MeshBasicMaterial({ color: srgb(1, 0.35, 0.25), toneMapped: false });
+const scorchMat = new THREE.MeshBasicMaterial({ color: 0x050506, transparent: true, opacity: 0.85, depthWrite: false });
+// three shots, each landing where the Falcon was a moment before: it slips out of the way of every one
+const TR_SHOTS = [{ at: 2.2, lane: 1 }, { at: 3.1, lane: 0 }, { at: 4.0, lane: 2 }];
+const trenchLane = u => {   // where the Falcon is across the trench: middle, left, right, middle
+  const k = [[1.9, 2.15, 1, 0], [2.75, 3.05, 0, 2], [3.65, 3.95, 2, 1]];
+  let x = TR.lanes[1];
+  for (const [a, b, from, to] of k) if (u >= a) x = lerp(TR.lanes[from], TR.lanes[to], smooth(a, b, u));
+  return x;
+};
+const trenchP = u => 70 * u;
+const SHOT_AHEAD = 35;   // shots land this far ahead of the Falcon, so the banner's short frame shows them
+const trenchH = u => u < 1.3 ? lerp(70, 6, 1 - (1 - u / 1.3) ** 2) : u < 4.6 ? 6 : 6 + 28 * (u - 4.6) ** 2;
+
 // a full-view veil: dark between shots, a white flash for the jump
 const veil = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ color: INK.clone(), transparent: true, opacity: 0, depthTest: false, depthWrite: false, fog: false, toneMapped: false }));
 veil.renderOrder = 999; veil.position.z = -0.5; camera.add(veil); scene.add(camera);
@@ -477,7 +560,47 @@ function shotJump(S, u) {
   hud(u < JUMP_AT ? 'THE CYCLE IS COMPLETE' : 'JUMP TO HYPERSPACE', u < JUMP_AT ? 'good' : '');
   return W(S, 0, -1.1, -40, _hero);
 }
-const SHOT_FN = { climb: shotClimb, station: shotStation, gates: shotGates, ties: shotTies, jump: shotJump };
+// 6. The run down the Death Star's trench: a dive in, three turbolaser shots, each marked by a red ring in the lane it will hit,
+// the Falcon slipping out of the way of each one, and the climb out.
+function shotTrench(S, u) {
+  TR.group.visible = true;
+  const p = trenchP(u), x = trenchLane(u), h = trenchH(u), dx = (trenchLane(u + 0.05) - x) / 0.05;
+  trenchPoint(p, x, h, _a);
+  const tilt = trenchTilt(p), dive = u < 1.3 ? 0.42 * (1 - u / 1.3) : 0, climb = u > 4.6 ? Math.min(0.5, (u - 4.6) * 0.8) : 0;
+  if (falcon.obj) {
+    falcon.obj.visible = true; falcon.obj.position.copy(_a); falcon.obj.scale.setScalar(3.4);
+    falcon.obj.rotation.set(-tilt + dive - climb, Math.PI, -0.011 * dx, 'YXZ');   // nose down with the curve and the dive, up for the climb
+    if (falcon.glow) falcon.glow.material.opacity = 0.9 + 0.1 * Math.sin(u * 29);
+  }
+  // shots: a ring from 0.8 s before, the bolt in the last 0.3 s, then a flash and a scorch mark
+  let shake = 0;
+  TR_SHOTS.forEach((sh, i) => {
+    const sp = trenchP(sh.at) + SHOT_AHEAD, at = trenchFloor(sp, TR.lanes[sh.lane], 0.2, _b), T = TR.towers[i], ring = TR.rings[i], bolt = TR.bolts[i], fl = TR.flashes[i];
+    const ringOn = u > sh.at - 0.8 && u < sh.at;
+    ring.visible = ringOn; if (ringOn) { ring.position.copy(at); ring.rotation.set(-Math.PI / 2 + trenchTilt(Math.floor(sp / TR.L) * TR.L), 0, 0); ringMat.opacity = 0.55 + 0.45 * Math.abs(Math.sin(u * 12)); ring.children[0].material.opacity = ringMat.opacity * 0.8; }
+    if (T) { T.head.lookAt(at); T.barrels.forEach(m => { m.material = u > sh.at - 0.8 && u < sh.at + 0.2 ? glowRed : T.dark; }); }
+    const f = (u - (sh.at - 0.3)) / 0.3;
+    bolt.visible = f > 0 && f < 1;
+    if (bolt.visible && T) {
+      const from = T.head.localToWorld(new V3(0, 0.1, 4.8)), head = _tmp.copy(from).lerp(at, f), tail = new V3().copy(from).lerp(at, Math.max(0, f - 0.35));
+      bolt.position.copy(head).add(tail).multiplyScalar(0.5); bolt.lookAt(head); bolt.scale.set(1, 1, head.distanceTo(tail));
+    }
+    const g = u - sh.at;
+    fl.visible = g >= 0 && g < 0.7;
+    if (fl.visible) { fl.position.copy(at); fl.children[0].scale.setScalar(4 + 22 * smooth(0, 0.25, g)); fl.children[0].material.opacity = 1 - smooth(0.1, 0.7, g); fl.children[1].scale.setScalar(2 + 9 * smooth(0, 0.2, g)); fl.children[1].material.opacity = 1 - smooth(0.05, 0.4, g); }
+    TR.scorches[i].visible = g >= 0;
+    if (g >= 0) { TR.scorches[i].position.copy(at); TR.scorches[i].position.y -= 0.14; TR.scorches[i].rotation.set(-Math.PI / 2 + trenchTilt(Math.floor(sp / TR.L) * TR.L), 0, i); }
+    if (g >= 0 && g < 0.5) shake = Math.max(shake, (1 - g / 0.5) * 0.35);
+  });
+  // the camera rides behind and above, following the curve
+  const view = tilt - dive * 0.6 + climb * 0.2, back = new V3(-0.25 * x, 3.0, 24).applyAxisAngle(new V3(1, 0, 0), view);
+  camera.position.copy(_a).add(back).add(_tmp.set(shake * Math.sin(u * 71), shake * Math.sin(u * 53), 0));
+  _look.copy(_a).add(new V3(0, 0.4, -30).applyAxisAngle(new V3(1, 0, 0), view));
+  const last = TR_SHOTS[TR_SHOTS.length - 1].at;
+  hud(u < 1.3 ? 'ESCAPE THE DEATH STAR' : u < last + 0.4 ? 'DODGE THE TURBOLASERS' : "WE'RE CLEAR", u < last + 0.4 ? 'alert' : 'good');
+  return _hero.copy(_a);
+}
+const SHOT_FN = { climb: shotClimb, station: shotStation, gates: shotGates, ties: shotTies, trench: shotTrench, jump: shotJump };
 
 // ---------- one frame, as a function of the clock ----------
 let simT = 0;
@@ -493,6 +616,8 @@ function step(dt) {
   shield.visible = false; GATES.forEach(G => { G.g.visible = false; }); gateFlash.visible = false;
   moon.visible = moonAir.visible = S.name === 'climb';
   warp.visible = false; sky.visible = true;
+  TR.group.visible = false; TR.rings.forEach(m => { m.visible = false; }); TR.bolts.forEach(m => { m.visible = false; }); TR.flashes.forEach(m => { m.visible = false; }); TR.scorches.forEach(m => { m.visible = false; });
+  [scene.fog.near, scene.fog.far] = S.name === 'trench' ? FOG_TRENCH : FOG_OFF;
   for (const R of ROCKS) {
     R.m.visible = R.S === S;
     if (!R.m.visible) continue;
@@ -526,7 +651,43 @@ layout();
 const relayout = () => { if (layout() && !running && document.body.classList.contains('live')) { step(0); renderer.render(scene, camera); } };
 addEventListener('resize', relayout);
 if ('ResizeObserver' in window) new ResizeObserver(relayout).observe(document.documentElement);
+async function loadMap(url, srgbColor) {
+  const blob = new Blob([await unpack(url)], { type: 'image/webp' }), bitmap = await createImageBitmap(blob, { imageOrientation: 'flipY' });
+  const t = new THREE.Texture(bitmap); t.colorSpace = srgbColor ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.MirroredRepeatWrapping; t.anisotropy = 4; t.needsUpdate = true; return t;
+}
+function buildTrench(plate, relief) {
+  const tints = [srgb(0.82, 0.84, 0.88), srgb(0.62, 0.64, 0.68), srgb(0.42, 0.44, 0.48)];
+  TR.mats = tints.map(c => new THREE.MeshStandardMaterial({ map: plate, normalMap: relief, normalScale: new THREE.Vector2(0.7, 0.7), color: c, roughness: 0.78, metalness: 0.3, envMapIntensity: 0.12 }));
+  TR.mats.push(new THREE.MeshBasicMaterial({ color: srgb(1.0, 0.86, 0.6) }));   // the lights in the walls
+  const variants = [0, 1, 2, 3, 4, 5].map(v => trenchSection(300 + v * 17));
+  for (let k = -2; k < 22; k++) {
+    const p = k * TR.L, m = new THREE.Mesh(variants[(k + 6) % 6], TR.mats);
+    m.position.set(0, trenchCurve(p), -p); m.rotation.set(trenchTilt(p), Math.PI, 0, 'XYZ'); m.frustumCulled = true;
+    TR.group.add(m);
+  }
+  // towers on the rim, ahead of where their shots land, on alternate sides
+  const steel = TR.mats[1], dark = TR.mats[2];
+  TR_SHOTS.forEach((sh, i) => {
+    const sp = trenchP(sh.at) + SHOT_AHEAD + 34, side = i % 2 ? -1 : 1;
+    const tower = new THREE.Group(); trenchPoint(sp, side * 17, 14.8, tower.position); tower.rotation.x = trenchTilt(sp); scene.add(tower);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 2.8, 10), steel); base.position.y = 1.4;
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.5, 3.2), dark); cap.position.y = 3;
+    const head = new THREE.Group(); head.position.y = 4.5;
+    head.add(new THREE.Mesh(new THREE.BoxGeometry(3.6, 2.2, 4), TR.mats[0]));
+    const barrels = [-1, 1].map(k => { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 3.2, 8).rotateX(Math.PI / 2), dark); b.position.set(k * 0.75, 0.1, 3.6); head.add(b); return b; });
+    tower.add(base, cap, head); TR.group.attach(tower);
+    TR.towers.push({ head, barrels, dark });
+    const ring = new THREE.Mesh(new THREE.RingGeometry(3.0, 3.9, 48), ringMat); ring.visible = false; scene.add(ring); TR.rings.push(ring);
+    const mark = new THREE.Sprite(additive(TEX.red)); mark.scale.setScalar(7); mark.position.z = 0.6; ring.add(mark);   // a red glow, seen from far off
+    const bolt = new THREE.Group(); bolt.add(new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1, 8).rotateX(Math.PI / 2), greenCore), new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 1, 10).rotateX(Math.PI / 2), greenHalo));
+    bolt.visible = false; scene.add(bolt); TR.bolts.push(bolt);
+    const fl = new THREE.Group(); fl.add(new THREE.Sprite(additive(TEX.green)), new THREE.Sprite(additive(TEX.star, 0xffffff))); fl.visible = false; scene.add(fl); TR.flashes.push(fl);
+    const sc = new THREE.Mesh(new THREE.CircleGeometry(2.1, 24), scorchMat); sc.visible = false; scene.add(sc); TR.scorches.push(sc);
+  });
+}
 const ready = Promise.all([
+  Promise.all([loadMap('trench_plating.bin', true), loadMap('trench_relief.bin', false)]).then(([plate, relief]) => buildTrench(plate, relief)),
   load('falcon.bin').then(gltf => {
     const { obj, dims } = fit(gltf.scene);
     const glow = new THREE.Sprite(additive(TEX.blue, 0x9fdcff));
