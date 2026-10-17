@@ -11,7 +11,16 @@ were not recorded in the download.
 The TIE fighter 3D model was supplied by the course author for The Carbon Rebellion (tie.zip). Its
 author and licence were not recorded in the download.
 
-The asteroids are drawn in code.
+The X-wing 3D model was supplied by the course author for The Carbon Rebellion (xwing.zip). Its
+author and licence were not recorded in the download.
+
+The Imperial-class Star Destroyer is "Star Wars; Imperial-Class Star Destroyer" by Heataker
+(https://sketchfab.com/Heataker), supplied by the course author, under the Sketchfab Standard licence
+(https://sketchfab.com/licenses). The game uses a lighter copy for the browser.
+
+The asteroids, the Death Star's trench and turbolaser towers, and the cargo canisters are drawn in
+code; the trench is plated with the supplied Death Star's own hull maps. The inside of the Falcon's gun
+turret was drawn for this game in Blender.
 
 This is an unofficial fan learning game. Star Wars names and designs belong to their respective
 rights holders. The game is not affiliated with Lucasfilm or Disney. Game audio is originally
