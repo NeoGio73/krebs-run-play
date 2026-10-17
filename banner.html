@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Krebs Run · Extra Credit</title>
 <meta name="description" content="Animated banner for The Krebs Run, an extra-credit citric acid cycle game.">
-<!-- Models, lightened for the web: the Millennium Falcon, the Death Star and the TIE fighter, all supplied by the course author
-     (the Death Star's and TIE fighter's downloads did not record an author or licence). The forest moon, asteroids, gates,
+<!-- Models, lightened for the web: the Millennium Falcon, the Death Star and the TIE fighter, supplied by the course author
+     (the Death Star's and TIE fighter's downloads did not record an author or licence), and the Imperial-class Star Destroyer
+     by Heataker (Sketchfab, Sketchfab Standard licence), also supplied by him. The inside of the gun turret was drawn for the game. The forest moon, asteroids, gates,
      the Death Star's trench (plated with that model's own hull maps) and the effects are drawn in code. three.js (MIT).
      Unofficial fan learning game, not affiliated with Lucasfilm or Disney. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -213,17 +214,19 @@ function rimMaterial(color, power, strength) {
 }
 
 // ---------- the shots ----------
-// Six places in one stretch of space, one for each shot, far apart. Each is laid out in its own frame: the camera near the
-// origin, looking down -Z. The order is the game's: the climb from the moon (the opening), the Death Star's shield going
-// down, a gate on a lap of the cycle, the TIE fighters, the run down the Death Star's trench (the escape), and the jump to
-// hyperspace (the ending).
+// Nine shots cut together like a trailer, in the game's order, each with its own camera: the lift-off from the forest moon,
+// the Star Destroyer coming straight at us, the Death Star's shield failing, a gate, the tractor beam, the TIE fighters'
+// attack, the gun turret, the trench run, and the jump to hyperspace. Each is laid out in its own place in space, far apart.
 const SHOTS = [
-  { name: 'climb', base: new V3(0, 0, 0), dur: 4.0 },
-  { name: 'station', base: new V3(6000, 0, 0), dur: 3.2 },
-  { name: 'gates', base: new V3(12000, 0, 0), dur: 5.2 },
-  { name: 'ties', base: new V3(18000, 0, 0), dur: 2.8 },
-  { name: 'trench', base: new V3(30000, 0, 0), dur: 5.8 },
-  { name: 'jump', base: new V3(24000, 0, 0), dur: 3.8 },
+  { name: 'liftoff', base: new V3(0, 0, 0), dur: 3.4 },
+  { name: 'destroyer', base: new V3(40000, 0, 0), dur: 4.6 },
+  { name: 'shield', base: new V3(6000, 0, 0), dur: 3.2 },
+  { name: 'gate', base: new V3(12000, 0, 0), dur: 3.6 },
+  { name: 'beam', base: new V3(48000, 0, 0), dur: 3.0 },
+  { name: 'tieattack', base: new V3(18000, 0, 0), dur: 2.6 },
+  { name: 'turret', base: new V3(54000, 0, 0), dur: 3.2 },
+  { name: 'trench', base: new V3(30000, 0, 0), dur: 5.4 },
+  { name: 'jump', base: new V3(24000, 0, 0), dur: 3.6 },
 ];
 let acc = 0; for (const S of SHOTS) { S.start = acc; acc += S.dur; }
 const LOOP = acc;
@@ -245,10 +248,10 @@ const sky = (() => {
 
 // the forest moon, low in the first shot
 const moon = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 64), new THREE.MeshStandardMaterial({ map: moonTex, roughness: 1, metalness: 0, envMapIntensity: 0.1 }));
-moon.rotation.set(1.35, 0.6, 0.2); moon.scale.setScalar(190);   // a pole turned away, so the camera sees forest, not a pinwheel
+moon.rotation.set(1.35, 0.6, 0.2); moon.scale.setScalar(200);   // a pole turned away, so the camera sees forest, not a pinwheel
 const moonAir = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 64), rimMaterial(srgb(0.45, 0.75, 1), 3.2, 1.1));
-moonAir.scale.setScalar(194);
-W(SH.climb, 60, -205, -260, moon.position); moonAir.position.copy(moon.position);
+moonAir.scale.setScalar(204);
+W(SH.liftoff, 0, -225, -110, moon.position); moonAir.position.copy(moon.position);
 scene.add(moon, moonAir);
 
 // asteroids, made in code as in the game: lumpy, faceted, slowly tumbling
@@ -268,13 +271,12 @@ function rock(S, at, size, drift) {
   m.scale.setScalar(size); scene.add(m);
   ROCKS.push({ S, m, at: at.clone(), drift: drift || new V3(), axis: new V3(r() - 0.5, r() - 0.5, r() - 0.5).normalize(), spin: 0.2 + r() * 0.5, phase: r() * 6 });
 }
-// the climb: some close by, drifting across, and more along the way up
-rock(SH.climb, new V3(-3, 3, -14), 0.9, new V3(-2.2, 0.3, 0.8));
-rock(SH.climb, new V3(18, 4, -36), 1.6, new V3(-1.2, 0.4, 2));
-rock(SH.climb, new V3(11, 13, -70), 2.2, new V3(-0.6, -0.4, 1.2));
-for (let i = 0; i < 10; i++) rock(SH.climb, new V3(-20 + rand() * 75, -2 + rand() * 30, -50 - rand() * 120), 0.8 + rand() * 2.4, new V3((rand() - 0.5) * 2, (rand() - 0.5), rand() * 2));
-// out beside the lanes and high in the corners, never among the gates
-for (const S of [SH.gates, SH.ties]) for (let i = 0; i < 16; i++) {
+// the lift-off: a few overhead and on the way up
+rock(SH.liftoff, new V3(-16, -8, -70), 2.0, new V3(1.5, 0.3, 1));
+rock(SH.liftoff, new V3(22, 2, -95), 2.8, new V3(-1, 0.2, 0.5));
+for (let i = 0; i < 8; i++) rock(SH.liftoff, new V3(-40 + rand() * 80, 5 + rand() * 40, -80 - rand() * 120), 0.8 + rand() * 2.4, new V3((rand() - 0.5) * 2, (rand() - 0.5), rand() * 2));
+// out beside the lanes and high in the corners, never among the gates; scattered round the others
+for (const S of [SH.gate, SH.tieattack, SH.turret, SH.beam]) for (let i = 0; i < 16; i++) {
   const side = i % 2 ? 1 : -1, z = -20 - rand() * 220;
   rock(S, new V3(side * (24 + rand() * 50 + 0.25 * -z), i % 4 < 2 ? -6 + rand() * 14 : 18 + rand() * 30, z), 1.2 + rand() * 3.5, new V3(0, 0, 0));
 }
@@ -301,11 +303,13 @@ function fit(root, by = 'xz') {
   return { obj: outer, holder, dims: dims.multiplyScalar(k) };
 }
 const falcon = { obj: null, glow: null };
-const ties = [{ obj: null }, { obj: null }];
+const ties = [{ obj: null }, { obj: null }, { obj: null }];
 // one Death Star for the station shot, a second, far off, behind the laps
-const stations = [{ obj: null, shots: [SH.station], at: new V3(30, 10, -480), r: 55 }, { obj: null, shots: [SH.gates, SH.ties], at: new V3(300, 70, -1500), r: 110 }];
+const stations = [{ obj: null, shots: [SH.shield], at: new V3(30, 10, -480), r: 55 }, { obj: null, shots: [SH.tieattack, SH.turret], at: new V3(300, 70, -1500), r: 110 }];
 const shield = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 48), rimMaterial(srgb(0.45, 0.8, 1), 2.2, 1.0));
-shield.scale.setScalar(stations[0].r * 1.12); W(SH.station, 30, 10, -480, shield.position); scene.add(shield);
+shield.scale.setScalar(stations[0].r * 1.12); W(SH.shield, 30, 10, -480, shield.position); scene.add(shield);
+// the Star Destroyer and the inside of the gun turret, once loaded
+const SD = { obj: null, len: 260 }, TURRET = { obj: null };
 
 // ---------- the gates: three rings, A B C, in the lane colours ----------
 const LANES = [-9, 0, 9], GATE_Z = -84, PICK = 1;
@@ -317,7 +321,7 @@ const GATES = LANES.map((x, i) => {
   const inner = new THREE.Mesh(new THREE.TorusGeometry(3.4, 0.05, 6, 72), innerMat);
   const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: letterTex('ABC'[i], LANE[i]), transparent: true, depthWrite: false, toneMapped: false }));
   tag.scale.setScalar(2.6); tag.position.y = 6.3;
-  g.add(outer, inner, tag); W(SH.gates, x, 0, GATE_Z, g.position); scene.add(g);
+  g.add(outer, inner, tag); W(SH.gate, x, 0, GATE_Z, g.position); scene.add(g);
   return { g, outer, inner, tag };
 });
 const gateFlash = new THREE.Sprite(additive(TEX.green)); gateFlash.visible = false; scene.add(gateFlash);
@@ -402,23 +406,74 @@ const ringMat = new THREE.MeshBasicMaterial({ color: srgb(1, 0.25, 0.2), transpa
 const glowRed = new THREE.MeshBasicMaterial({ color: srgb(1, 0.35, 0.25), toneMapped: false });
 const scorchMat = new THREE.MeshBasicMaterial({ color: 0x050506, transparent: true, opacity: 0.85, depthWrite: false });
 // three shots, each landing where the Falcon was a moment before: it slips out of the way of every one
-const TR_SHOTS = [{ at: 2.2, lane: 1 }, { at: 3.1, lane: 0 }, { at: 4.0, lane: 2 }];
+const TR_SHOTS = [{ at: 2.9, lane: 1 }, { at: 3.7, lane: 0 }, { at: 4.5, lane: 2 }];
 const trenchLane = u => {   // where the Falcon is across the trench: middle, left, right, middle
-  const k = [[1.9, 2.15, 1, 0], [2.75, 3.05, 0, 2], [3.65, 3.95, 2, 1]];
+  const k = [[2.6, 2.85, 1, 0], [3.4, 3.65, 0, 2], [4.2, 4.45, 2, 1]];
   let x = TR.lanes[1];
   for (const [a, b, from, to] of k) if (u >= a) x = lerp(TR.lanes[from], TR.lanes[to], smooth(a, b, u));
   return x;
 };
-const trenchP = u => 70 * u;
+const trenchP = u => -40 + 70 * u;
+const TR_CUT = 2.0;   // the side view of the dive until here, then the chase down the trench
 const SHOT_AHEAD = 35;   // shots land this far ahead of the Falcon, so the banner's short frame shows them
-const trenchH = u => u < 1.3 ? lerp(70, 6, 1 - (1 - u / 1.3) ** 2) : u < 4.6 ? 6 : 6 + 28 * (u - 4.6) ** 2;
+const trenchH = u => u < 1.7 ? lerp(60, 6, 1 - (1 - u / 1.7) ** 2) : u < 4.95 ? 6 : 6 + 28 * (u - 4.95) ** 2;
+
+// ---------- props for the trailer's shots ----------
+TEX.fire = radial([[0, 'rgba(255,240,200,1)'], [0.3, 'rgba(255,150,60,0.85)'], [0.65, 'rgba(190,60,15,0.35)'], [1, 'rgba(0,0,0,0)']], 128);
+// the cargo canister the tractor beam pulls in, in gate B's gold, and the beam itself
+const CAN = new THREE.Group();
+{
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1.5, 24), new THREE.MeshStandardMaterial({ color: srgb(0.55, 0.58, 0.62), roughness: 0.5, metalness: 0.6, envMapIntensity: 0.4 }));
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(1.04, 1.04, 0.34, 24), new THREE.MeshBasicMaterial({ color: LANE[1], toneMapped: false }));
+  const ringM = new THREE.MeshBasicMaterial({ color: LANE[1], transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  const r1 = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.06, 6, 40), ringM); r1.rotation.x = Math.PI / 2; r1.position.y = 0.78;
+  const r2 = r1.clone(); r2.position.y = -0.78;
+  CAN.add(body, band, r1, r2); CAN.visible = false; scene.add(CAN);
+}
+const RAY = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 1.7, 1, 24, 1, true), new THREE.MeshBasicMaterial({ color: srgb(0.55, 0.9, 1), transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
+RAY.visible = false; scene.add(RAY);
+const SPARK = new THREE.Sprite(additive(TEX.green)); SPARK.visible = false; scene.add(SPARK);
+// laser bolts: a pool of bright cores with a soft halo, green for the Empire, red for the Falcon's cannons
+function boltMesh(core, halo, k = 1) {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.16 * k, 0.16 * k, 1, 8).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: core, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false })),
+        new THREE.Mesh(new THREE.CylinderGeometry(0.5 * k, 0.5 * k, 1, 10).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: halo, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false })));
+  g.visible = false; scene.add(g); return g;
+}
+const GREEN_BOLTS = Array.from({ length: 30 }, () => boltMesh(srgb(0.85, 1, 0.85), srgb(0.3, 1, 0.4)));
+const RED_BOLTS = Array.from({ length: 4 }, () => boltMesh(srgb(1, 0.85, 0.8), srgb(1, 0.3, 0.2), 0.3));   // thin: they leave right in front of the camera
+function placeBolt(b, from, to, f, len) {
+  b.visible = f > 0 && f < 1;
+  if (!b.visible) return;
+  const head = _bh.copy(from).lerp(to, f), tail = _bt.copy(from).lerp(to, Math.max(0, f - len));
+  b.position.copy(head).add(tail).multiplyScalar(0.5); b.lookAt(head); b.scale.set(1, 1, Math.max(0.01, head.distanceTo(tail)));
+}
+const _bh = new V3(), _bt = new V3();
+// the turret's sights round the TIE being aimed at
+const bracketTex = canvasTex(128, 128, (x, w) => {
+  x.strokeStyle = '#fff'; x.lineWidth = 8; const L = 34, m = 6;
+  for (const [cx, cy, sx, sy] of [[m, m, 1, 1], [w - m, m, -1, 1], [m, w - m, 1, -1], [w - m, w - m, -1, -1]]) { x.beginPath(); x.moveTo(cx + sx * L, cy); x.lineTo(cx, cy); x.lineTo(cx, cy + sy * L); x.stroke(); }
+});
+const BRACKET = new THREE.Sprite(new THREE.SpriteMaterial({ map: bracketTex, color: LANE[1], transparent: true, depthWrite: false, depthTest: false, toneMapped: false })); BRACKET.visible = false; scene.add(BRACKET);
+// a TIE fighter blowing up: fire, a white core and pieces flying off
+const BOOM = new THREE.Group();
+{
+  BOOM.add(new THREE.Sprite(additive(TEX.fire)), new THREE.Sprite(additive(TEX.star, 0xffffff)));
+  const bitGeo = new THREE.TetrahedronGeometry(0.6, 0), bitMat = new THREE.MeshStandardMaterial({ color: 0x3b3d42, roughness: 0.7, metalness: 0.4 });
+  for (let i = 0; i < 9; i++) BOOM.add(new THREE.Mesh(bitGeo, bitMat));
+  BOOM.visible = false; scene.add(BOOM);
+}
+const BOOM_DIRS = Array.from({ length: 9 }, (_, i) => { const r = mulberry(400 + i); return new V3(r() - 0.5, r() - 0.3, r() - 0.5).normalize().multiplyScalar(10 + r() * 14); });
+// the Star Destroyer's engines: three main and four smaller, blue (in its own size: length 1, bow toward +Z)
+const SD_ENGINES = [[-0.134, -0.071, -0.46, 0.085], [0, -0.071, -0.46, 0.085], [0.133, -0.071, -0.46, 0.085],
+  [-0.068, -0.05, -0.475, 0.045], [0.068, -0.05, -0.475, 0.045], [-0.068, -0.091, -0.475, 0.045], [0.068, -0.091, -0.475, 0.045]];
 
 // a full-view veil: dark between shots, a white flash for the jump
 const veil = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ color: INK.clone(), transparent: true, opacity: 0, depthTest: false, depthWrite: false, fog: false, toneMapped: false }));
 veil.renderOrder = 999; veil.position.z = -0.5; camera.add(veil); scene.add(camera);
 
 // ---------- layout: the drawing follows the banner's real size ----------
-let wide = true, sizeW = 0, sizeH = 0;
+let wide = true, sizeW = 0, sizeH = 0, baseFov = 30;
 // Fit the drawing to the banner's real size. D2L can load the banner while the announcement is still folded
 // shut (no size yet) and open it later without telling the page, so this is checked on every frame too.
 function layout() {
@@ -436,7 +491,7 @@ function layout() {
   camera.setViewOffset(fw, fh, 0, 0, w, h);
   camera.aspect = fw / fh;
   const hfov = wide ? 62 : 50;
-  camera.fov = clamp(2 * Math.atan(Math.tan(hfov * Math.PI / 360) / camera.aspect) * 180 / Math.PI, 18, 78);
+  camera.fov = baseFov = clamp(2 * Math.atan(Math.tan(hfov * Math.PI / 360) / camera.aspect) * 180 / Math.PI, 18, 78);
   camera.updateProjectionMatrix();
   return true;
 }
@@ -462,111 +517,186 @@ function placeFalcon(S, pos, vel, size, bank = 0, glow = 1) {
   orientAlong(falcon.obj, vel, bank);
   if (falcon.glow) falcon.glow.material.opacity = glow;
 }
-// 1. The Falcon climbs away from the forest moon past tumbling asteroids; the camera trails and tilts up after it.
-function climbAt(u, out) { return out.set(3 + 2.4 * u, -4.5 + 3.2 * u, -30 - 8 * u - 1.6 * u * u); }
-function shotClimb(S, u) {
-  climbAt(u, _a); climbAt(u + 0.05, _b);
-  placeFalcon(S, _a, _b.sub(_a), 5, -0.25 + 0.12 * Math.sin(u * 1.4), 0.85 + 0.15 * Math.sin(u * 31));
-  W(S, 0.3 * u, 0.7 * u, 0, camera.position);
-  _look.copy(_a).add(S.base).add(_tmp.set(0, 1 + 0.6 * u, 0));
+const _c = new V3(), _d = new V3();
+// 1. Lift-off: from low over the forest moon, looking up, the Falcon sweeps overhead and away into the stars.
+function liftoffAt(u, out) { return out.set(6 - 4.7 * u, -26 + 8 * u + 2.6 * u * u, 28 - 52 * u); }
+function shotLiftoff(S, u) {
+  liftoffAt(u, _a); liftoffAt(u + 0.05, _b);
+  placeFalcon(S, _a, _b.sub(_a), 6.5, -0.3 + 0.15 * Math.sin(u * 1.4), 0.85 + 0.15 * Math.sin(u * 31));
+  const pass = Math.max(0, 1 - Math.abs(u - 0.95) / 0.5) * 0.14;
+  W(S, pass * Math.sin(u * 61), -21 + pass * Math.sin(u * 47), -20, camera.position);
+  W(S, -8, -16, -120, _look).lerp(_c.copy(_a).add(S.base), smooth(0.4, 1.1, u) * 0.85);
   hud('PYRUVATE IS ABOARD');
-  return _hero.copy(_a).add(S.base);
+  return null;
 }
-// 2. The Death Star ahead: sunlit on one half, window lights on the other. Its shield flickers twice and goes out.
-const SHIELD_OFF = 2.0;
+// 2. The Star Destroyer comes straight at us, bow first, passes overhead, and we turn to watch its engines go by.
+function shotDestroyer(S, u) {
+  const c = W(S, 46, 125, -520 + 150 * u, _a);
+  if (SD.obj) { SD.obj.visible = true; SD.obj.position.copy(c); SD.obj.scale.setScalar(SD.len); SD.obj.rotation.set(-0.035, 0.04, 0.02); }
+  const bow = _b.copy(c).add(_tmp.set(0, -20, SD.len / 2)), stern = _c.copy(c).add(_tmp.set(0, -30, -SD.len / 2));
+  W(S, 0.4 * Math.sin(u * 0.7), 0.2 * Math.sin(u * 0.5), 0, camera.position);
+  _look.lerpVectors(bow, stern, smooth(1.6, 4.4, u));
+  hud('IMPERIAL STAR DESTROYER', 'alert');
+  return null;
+}
+// 3. The Death Star's shield flickers and fails as the Falcon crosses in front, side-on.
+const SHIELD_OFF = 1.9;
 function shieldLevel(u) {
   if (u >= SHIELD_OFF + 0.35) return 0;
-  const flick = (u > 1.15 && u < 1.27) || (u > 1.55 && u < 1.62) || (u > 1.8 && u < 1.86) ? 0.12 : 1;
+  const flick = (u > 1.05 && u < 1.17) || (u > 1.45 && u < 1.52) || (u > 1.7 && u < 1.76) ? 0.12 : 1;
   return flick * (1 - smooth(SHIELD_OFF, SHIELD_OFF + 0.35, u)) * (0.92 + 0.08 * Math.sin(u * 19));
 }
-function shotStation(S, u) {
+function shotShield(S, u) {
   const st = stations[0];
-  _a.set(1.5, -1.6, -19 - 5.5 * u);
-  _b.copy(st.at).sub(_a);
-  placeFalcon(S, _a, _b, 5, 0.08 * Math.sin(u * 1.1));
+  _a.set(-44 + 33 * u, -8 + 0.5 * Math.sin(u), -66);
+  placeFalcon(S, _a, _tmp.set(1, 0.02, -0.12), 6, -0.08, 0.9);
   shield.visible = true; shield.material.uniforms.uStrength.value = 1.0 * shieldLevel(u);
-  W(S, -0.4 * u, 0.3 * u, 0, camera.position);
-  _look.copy(st.at).lerp(_a, 0.3).add(S.base);
+  W(S, 0, 0.25 * u, 0, camera.position);
+  _look.copy(st.at).add(S.base).add(_tmp.set(-14, -14, 0));
   hud(u < SHIELD_OFF + 0.2 ? 'DEATH STAR SHIELD UP' : 'THE SHIELD IS DOWN', u < SHIELD_OFF + 0.2 ? 'alert' : '');
-  return _hero.copy(st.at).add(S.base);
+  return null;
 }
-// 3. A gate on a lap: the Falcon lines up with gate B and flies through it; it flashes green and the NADH gauge fills.
-const GATE_SPEED = 23, PASS = -GATE_Z / GATE_SPEED;
-function shipX(u) { return lerp(LANES[0], LANES[PICK], smooth(0.5, 1.5, u)); }
-function shotGates(S, u) {
-  const x = shipX(u), z = -GATE_SPEED * u;
+// 4. A gate, from low beside it: the Falcon comes head-on, lines up with B, flies through as it turns green, and roars past.
+const GATE_FROM = 70, GATE_SPEED = 75, PASS = (GATE_FROM - GATE_Z) / GATE_SPEED;
+function gateX(u) { return lerp(LANES[0], LANES[PICK], smooth(0.2, 1.1, u)); }
+function shotGate(S, u) {
+  const x = gateX(u), z = GATE_FROM - GATE_SPEED * u, slide = (gateX(u + 0.05) - x) / 0.05;
   _a.set(x, 0.15 * Math.sin(u * 2.2), z);
-  const slide = (shipX(u + 0.05) - x) / 0.05;
   placeFalcon(S, _a, _tmp.set(0, 0, -1), 3.6, -0.025 * slide, 0.9 + 0.1 * Math.sin(u * 29));
   const passed = u >= PASS, f = u - PASS;
   GATES.forEach((G, i) => {
     G.g.visible = true;
-    const fade = i === PICK ? 1 : 1 - smooth(PASS - 0.6, PASS + 0.2, u);
+    const fade = i === PICK ? 1 : 1 - smooth(PASS - 0.5, PASS + 0.2, u);
     G.outer.material.color.copy(i === PICK && passed ? GREEN : LANE[i]);
     G.outer.material.opacity = fade * (i === PICK && passed ? 1 : 0.95);
     G.inner.material.color.copy(G.outer.material.color); G.inner.material.opacity = 0.35 * fade;
-    G.tag.material.opacity = fade * (1 - smooth(PASS - 0.8, PASS - 0.3, u));
+    G.tag.material.opacity = fade * (1 - smooth(PASS - 0.5, PASS - 0.2, u));
     G.outer.scale.setScalar(i === PICK && passed ? 1 + 0.25 * smooth(0, 0.4, f) : 1);
   });
   gateFlash.visible = passed && f < 0.7;
   if (gateFlash.visible) { W(S, LANES[PICK], 0, GATE_Z, gateFlash.position); gateFlash.scale.setScalar(5 + 9 * smooth(0, 0.35, f)); gateFlash.material.opacity = 0.75 * (1 - smooth(0.1, 0.7, f)); }
-  // the camera slides with the ship, as in the game
-  W(S, x, 1.6, z + 18, camera.position);
-  W(S, x, 0.3, z - 40, _look);
-  const lined = u >= 1.5;
-  hud(passed ? 'GATE B  ·  CORRECT  ·  NADH +1' : lined ? 'GATE B LINED UP' : 'LAP 1  ·  LINE UP WITH A GATE', passed ? 'good' : '', 0.33 + 0.34 * smooth(PASS + 0.05, PASS + 0.6, u));
-  return _hero.copy(_a).add(S.base);
+  const roar = Math.max(0, 1 - Math.abs(u - PASS - 0.12) / 0.3) * 0.12;
+  W(S, 24 + roar * Math.sin(u * 63), -3.5 + roar * Math.sin(u * 51), GATE_Z - 18, camera.position);
+  const toGate = W(S, LANES[PICK], 0, GATE_Z, _b).lerp(_c.copy(_a).add(S.base), 0.45);
+  _look.copy(toGate).lerp(_c.copy(_a).add(S.base), smooth(PASS - 0.35, PASS + 0.1, u));
+  hud(passed ? 'GATE B  ·  CORRECT  ·  NADH +1' : u > 1.1 ? 'GATE B LINED UP' : 'LAP 1  ·  LINE UP WITH A GATE', passed ? 'good' : '', 0.33 + 0.34 * smooth(PASS + 0.05, PASS + 0.6, u));
+  return null;
 }
-// 4. Two TIE fighters streak across, low and ahead, as they do between legs in the game.
-const TIE_AT = 0.35, TIE_DUR = 2.3;
-function shotTies(S, u) {
-  const z = -GATE_SPEED * 0.8 * u;
-  _a.set(0, 0.15 * Math.sin(u * 2.2), z);
-  placeFalcon(S, _a, _tmp.set(0, 0, -1), 3.6, 0.05 * Math.sin(u * 1.7), 0.9 + 0.1 * Math.sin(u * 29));
+// 5. The tractor beam, close and side-on: a canister rises from below into the Falcon's hold.
+function shotBeam(S, u) {
+  const fx = 2 - 1.1 * u;
+  _a.set(fx, 0.1 * Math.sin(u * 2), -26);
+  placeFalcon(S, _a, _tmp.set(-1, 0, 0.05), 6.5, 0.04, 0.9);
+  const rise = smooth(0.5, 2.3, u), gone = smooth(2.25, 2.55, u);
+  CAN.visible = gone < 1;
+  W(S, fx - 0.5, lerp(-6.8, -0.9, rise), -25.4, CAN.position); CAN.scale.setScalar(1.1 * (1 - gone)); CAN.rotation.set(u * 1.3, u * 2.1, 0.4);
+  RAY.visible = u > 0.35 && u < 2.5;
+  if (RAY.visible) {
+    const top = W(S, fx - 0.5, -0.7, -25.4, _b), dir = _c.copy(CAN.position).sub(top), len = dir.length();
+    RAY.position.copy(top).addScaledVector(dir, 0.5); RAY.scale.set(1, len, 1);
+    RAY.quaternion.setFromUnitVectors(_d.set(0, -1, 0), dir.normalize());
+    RAY.material.opacity = (0.4 + 0.15 * Math.sin(u * 18)) * smooth(0.35, 0.6, u) * (1 - smooth(2.3, 2.5, u));
+  }
+  SPARK.visible = u > 2.4 && u < 3.0;
+  if (SPARK.visible) { W(S, fx - 0.5, -0.8, -25.4, SPARK.position); SPARK.scale.setScalar(2 + 8 * smooth(2.4, 2.65, u)); SPARK.material.opacity = 1 - smooth(2.55, 3.0, u); }
+  W(S, 0.4 * u, 0.6, 0, camera.position);
+  W(S, fx - 0.4, -2.0, -26, _look);
+  hud(u < 2.45 ? 'LAP 2  ·  TRACTOR BEAM' : 'CANISTER B  ·  NADH ABOARD', u < 2.45 ? '' : 'good', u < 2.45 ? 0.33 : 0.67);
+  return null;
+}
+// 6. TIE fighters, far off and head-on, close in fast and open fire; the bolts streak past.
+const TIE_FORM = [new V3(0, 0, 0), new V3(-10, 4.5, -8), new V3(10, -3, -14)];
+function tieAttackAt(k, u, out) {
+  const spread = 1 + 1.6 * smooth(1.7, 2.6, u);
+  return out.copy(TIE_FORM[k]).multiplyScalar(spread).add(_d.set(4 * Math.sin(u * 1.3 + k), 1.5 * Math.sin(u * 2 + k * 2), -520 + 205 * u));   // they roar past us at the end
+}
+const VOLLEYS = []; for (let j = 0; j < 5; j++) for (let k = 0; k < 3; k++) VOLLEYS.push({ k, at: 0.35 + 0.42 * j + 0.12 * k, j });
+function shotTieAttack(S, u) {
   ties.forEach((T, k) => {
     if (!T.obj) return;
-    const f = (u - TIE_AT - k * 0.16) / TIE_DUR;
-    T.obj.visible = f > -0.05 && f < 1.05;
-    if (!T.obj.visible) return;
-    const from = _b.set(34, k ? 3.4 : -2.4, z - 12 - k * 5), to = _tmp.set(-36, k ? 3.0 : -2.0, z - 20 - k * 5);
-    T.obj.position.lerpVectors(from, to, f).add(S.base); T.obj.scale.setScalar(3.6);
-    orientAlong(T.obj, to.sub(from), 0.3 * (k ? -1 : 1));
+    tieAttackAt(k, u, _a); T.obj.visible = true; T.obj.position.copy(_a).add(S.base); T.obj.scale.setScalar(3.8);
+    T.obj.rotation.set(0.05 * Math.sin(u * 2 + k), 0, 0.25 * Math.sin(u * 1.6 + k * 1.7));
   });
-  W(S, 0, 1.6, z + 18, camera.position);
-  W(S, 0, 0.3, z - 40, _look);
-  hud('LAP 3  ·  THE BLOCKADES', u > TIE_AT - 0.2 && u < TIE_AT + TIE_DUR + 0.2 ? 'alert' : '');
-  return _hero.copy(_a).add(S.base);
+  let shake = 0, n = 0;
+  for (const v of VOLLEYS) {
+    const f = (u - v.at) / 0.4;
+    for (const side of [-1, 1]) {
+      const b = GREEN_BOLTS[n++]; if (!b) continue;
+      if (f <= 0 || f >= 1) { b.visible = false; continue; }
+      tieAttackAt(v.k, v.at, _b).add(S.base).add(_tmp.set(side * 0.9, -0.3, 0));
+      const to = _c.set(((v.j + v.k) % 2 ? 1 : -1) * (2.2 + side * 0.6), 1.2 * Math.sin(v.j + v.k), 4).add(S.base);
+      placeBolt(b, _b, to, f, 0.22);
+      if (f > 0.85) shake = Math.max(shake, 0.12);
+    }
+  }
+  W(S, shake * Math.sin(u * 71), shake * Math.sin(u * 53), 0, camera.position);
+  W(S, 0, 1, -200, _look);
+  hud('LAP 3  ·  THE BLOCKADES', 'alert');
+  return null;
 }
-// 5. The jump: the stars stretch into streaks as the Falcon gathers speed; it leaps away in a flash and they stream past.
-const JUMP_AT = 2.0;
+// 7. Cut to the gun turret: the cannons fire at TIE B, miss once, then hit, and it blows apart.
+function tieSwoop(i, u, out) { const a = u * (0.8 + 0.13 * i) + i * 2.1; return out.set((i - 1) * 16 + 6 * Math.sin(a), -1 + 3.5 * Math.sin(a * 1.6 + i), -52 - i * 5 - 8 * Math.sin(a * 0.7 + 1)); }
+const HIT_AT = 2.15;
+function shotTurret(S, u) {
+  if (TURRET.obj) TURRET.obj.visible = true;
+  W(S, 0, 0, 0, camera.position);
+  W(S, 2 * Math.sin(u * 0.5), 3 + Math.sin(u * 0.7), -60, _look);
+  camera.lookAt(_look); camera.updateMatrixWorld();   // placed now, so the bolts leave from the cannon tips
+  ties.forEach((T, i) => {
+    if (!T.obj) return;
+    T.obj.visible = !(i === 1 && u >= HIT_AT);
+    tieSwoop(i, u, _a); tieSwoop(i, u + 0.05, _b);
+    T.obj.position.copy(_a).add(S.base); T.obj.scale.setScalar(6.5);
+    const v = _b.sub(_a).multiplyScalar(20).add(_tmp.set(0, 0, 6));
+    T.obj.rotation.set(0, Math.atan2(v.x, v.z), -v.x * 0.03);
+  });
+  // two volleys from the cannon tips: the first wide, the second home
+  const tip = [new V3(-0.74, -0.62, -2.25), new V3(0.74, -0.62, -2.25)];
+  [[0.75, 1], [1.85, 0]].forEach(([at, miss], vi) => {
+    const f = (u - at) / 0.3, aim = tieSwoop(1, at + 0.3, _d).add(S.base).add(_tmp.set(miss * 5, miss * 3, 0));
+    tip.forEach((t, k) => { const from = camera.localToWorld(_c.copy(t)); placeBolt(RED_BOLTS[vi * 2 + k], from, aim, f, 0.45); });
+  });
+  const g = u - HIT_AT;
+  BOOM.visible = g >= 0 && g < 1.2;
+  if (BOOM.visible) {
+    tieSwoop(1, HIT_AT, BOOM.position).add(S.base);
+    BOOM.children[0].scale.setScalar(6 + 22 * smooth(0, 0.35, g)); BOOM.children[0].material.opacity = 1 - smooth(0.2, 1.1, g);
+    BOOM.children[1].scale.setScalar(3 + 10 * smooth(0, 0.2, g)); BOOM.children[1].material.opacity = 1 - smooth(0.05, 0.4, g);
+    for (let i = 2; i < BOOM.children.length; i++) { const d = BOOM_DIRS[i - 2]; BOOM.children[i].position.copy(d).multiplyScalar(g); BOOM.children[i].rotation.set(g * 7 + i, g * 5, g * 3); BOOM.children[i].visible = g < 1.0; }
+  }
+  BRACKET.visible = u < HIT_AT && !!ties[1].obj;
+  if (BRACKET.visible) { BRACKET.position.copy(ties[1].obj.position); BRACKET.scale.setScalar(13); BRACKET.material.color.copy(u > 0.7 ? (Math.floor(u * 10) % 2 ? LANE[1] : srgb(1, 0.35, 0.25)) : LANE[1]); }
+  hud(u < HIT_AT ? 'TARGET B IN YOUR SIGHTS' : 'TARGET B  ·  HIT', u < HIT_AT ? 'alert' : 'good');
+  return null;
+}
+// 9. The jump, front-on: the stars stretch into streaks behind the Falcon as it comes at us, then it leaps and is gone.
+const JUMP_AT = 2.1;
 function shotJump(S, u) {
-  const gather = smooth(0.3, JUMP_AT, u), after = smooth(JUMP_AT, JUMP_AT + 0.3, u);
-  const length = lerp(1.5, 140, gather * gather) + 260 * after, run = 900 * Math.max(0, u - JUMP_AT);
+  const gather = smooth(0.2, JUMP_AT, u), after = smooth(JUMP_AT, JUMP_AT + 0.3, u);
+  const length = lerp(1.5, 140, gather * gather) + 260 * after, run = 220 * gather * gather + 900 * Math.max(0, u - JUMP_AT);
   const arr = warpGeo.attributes.instanceStart.data.array;
   for (let i = 0; i < WARP_N; i++) {
     const s = warpStars[i];
-    const d = 40 + ((((-s.z - 40 - run) % 1000) + 1000) % 1000), z = -d;   // wraps round once a star passes the camera
-    arr.set([s.x, s.y, z, s.x, s.y, z + length], i * 6);
+    const z = -40 + ((((-s.z) + run) % 1000) + 1000) % 1000;   // streaming away behind the Falcon, round again once far off
+    arr.set([s.x, s.y, z, s.x, s.y, z - length], i * 6);
   }
   warpGeo.attributes.instanceStart.data.needsUpdate = true;
   warp.visible = true; sky.visible = false;
-  const leap = clamp((u - JUMP_AT) / 0.45, 0, 1);
-  _a.set(0, -1.1 + 0.15 * Math.sin(u * 1.3), -(9 + 30 * gather + 900 * leap * leap));
-  if (leap < 1) placeFalcon(S, _a, _tmp.set(0, 0, -1), 4, 0, 1);
-  if (falcon.obj) falcon.obj.rotation.x = 0.035 * gather;
+  const leap = clamp((u - JUMP_AT) / 0.3, 0, 1);   // it leaps at us and past us, into the flash
+  if (leap < 1) placeFalcon(S, _a.set(0, -0.8 + 0.15 * Math.sin(u * 1.3), -40 * leap * leap), _tmp.set(0, 0, -1), 4.5, 0.05 * Math.sin(u * 1.1), 1);
   const shake = u > JUMP_AT && u < JUMP_AT + 0.5 ? (1 - (u - JUMP_AT) / 0.5) * 0.25 : 0;
-  W(S, shake * Math.sin(u * 71), 0.6 + shake * Math.sin(u * 53), 8, camera.position);
-  W(S, 0, -0.4, -60, _look);
+  W(S, shake * Math.sin(u * 71), 1.3 + shake * Math.sin(u * 53), -15, camera.position);
+  W(S, 0, -0.4, 40, _look);
   hud(u < JUMP_AT ? 'THE CYCLE IS COMPLETE' : 'JUMP TO HYPERSPACE', u < JUMP_AT ? 'good' : '');
-  return W(S, 0, -1.1, -40, _hero);
+  return null;
 }
-// 6. The run down the Death Star's trench: a dive in, three turbolaser shots, each marked by a red ring in the lane it will hit,
-// the Falcon slipping out of the way of each one, and the climb out.
+// 8. The trench run: first side-on from the rim as the Falcon sweeps down into the trench, then the chase down it, three
+// turbolaser shots each marked by a red ring, the Falcon slipping out of the way of each one, and the climb out.
 function shotTrench(S, u) {
   TR.group.visible = true;
   const p = trenchP(u), x = trenchLane(u), h = trenchH(u), dx = (trenchLane(u + 0.05) - x) / 0.05;
   trenchPoint(p, x, h, _a);
-  const tilt = trenchTilt(p), dive = u < 1.3 ? 0.42 * (1 - u / 1.3) : 0, climb = u > 4.6 ? Math.min(0.5, (u - 4.6) * 0.8) : 0;
+  const tilt = trenchTilt(p), dive = u < 1.7 ? 0.5 * (1 - u / 1.7) : 0, climb = u > 4.95 ? Math.min(0.5, (u - 4.95) * 0.8) : 0;
   if (falcon.obj) {
     falcon.obj.visible = true; falcon.obj.position.copy(_a); falcon.obj.scale.setScalar(3.4);
     falcon.obj.rotation.set(-tilt + dive - climb, Math.PI, -0.011 * dx, 'YXZ');   // nose down with the curve and the dive, up for the climb
@@ -592,15 +722,21 @@ function shotTrench(S, u) {
     if (g >= 0) { TR.scorches[i].position.copy(at); TR.scorches[i].position.y -= 0.14; TR.scorches[i].rotation.set(-Math.PI / 2 + trenchTilt(Math.floor(sp / TR.L) * TR.L), 0, i); }
     if (g >= 0 && g < 0.5) shake = Math.max(shake, (1 - g / 0.5) * 0.35);
   });
-  // the camera rides behind and above, following the curve
+  const last = TR_SHOTS[TR_SHOTS.length - 1].at;
+  hud(u < TR_CUT ? 'ESCAPE THE DEATH STAR' : u < last + 0.4 ? 'DODGE THE TURBOLASERS' : "WE'RE CLEAR", u < last + 0.4 ? 'alert' : 'good');
+  if (u < TR_CUT) {
+    // side-on from the right-hand rim: the Falcon sweeps down past us into the trench and away along it
+    trenchPoint(66, 30, 34, camera.position);
+    _look.copy(_a).lerp(trenchPoint(p + 30, x, 4, _c), 0.25);
+    return null;
+  }
+  // then the chase: the camera rides behind and above, following the curve
   const view = tilt - dive * 0.6 + climb * 0.2, back = new V3(-0.25 * x, 3.0, 24).applyAxisAngle(new V3(1, 0, 0), view);
   camera.position.copy(_a).add(back).add(_tmp.set(shake * Math.sin(u * 71), shake * Math.sin(u * 53), 0));
   _look.copy(_a).add(new V3(0, 0.4, -30).applyAxisAngle(new V3(1, 0, 0), view));
-  const last = TR_SHOTS[TR_SHOTS.length - 1].at;
-  hud(u < 1.3 ? 'ESCAPE THE DEATH STAR' : u < last + 0.4 ? 'DODGE THE TURBOLASERS' : "WE'RE CLEAR", u < last + 0.4 ? 'alert' : 'good');
   return _hero.copy(_a);
 }
-const SHOT_FN = { climb: shotClimb, station: shotStation, gates: shotGates, ties: shotTies, trench: shotTrench, jump: shotJump };
+const SHOT_FN = { liftoff: shotLiftoff, destroyer: shotDestroyer, shield: shotShield, gate: shotGate, beam: shotBeam, tieattack: shotTieAttack, turret: shotTurret, trench: shotTrench, jump: shotJump };
 
 // ---------- one frame, as a function of the clock ----------
 let simT = 0;
@@ -614,7 +750,10 @@ function step(dt) {
   ties.forEach(T => { if (T.obj) T.obj.visible = false; });
   stations.forEach(st => { if (!st.obj) return; st.obj.visible = st.shots.includes(S); if (st.obj.visible) st.obj.position.copy(st.at).add(S.base); });
   shield.visible = false; GATES.forEach(G => { G.g.visible = false; }); gateFlash.visible = false;
-  moon.visible = moonAir.visible = S.name === 'climb';
+  moon.visible = moonAir.visible = S.name === 'liftoff';
+  if (SD.obj) SD.obj.visible = false; if (TURRET.obj) TURRET.obj.visible = false;
+  CAN.visible = RAY.visible = SPARK.visible = BRACKET.visible = BOOM.visible = false;
+  GREEN_BOLTS.forEach(b => { b.visible = false; }); RED_BOLTS.forEach(b => { b.visible = false; });
   warp.visible = false; sky.visible = true;
   TR.group.visible = false; TR.rings.forEach(m => { m.visible = false; }); TR.bolts.forEach(m => { m.visible = false; }); TR.flashes.forEach(m => { m.visible = false; }); TR.scorches.forEach(m => { m.visible = false; });
   [scene.fog.near, scene.fog.far] = S.name === 'trench' ? FOG_TRENCH : FOG_OFF;
@@ -624,8 +763,11 @@ function step(dt) {
     R.m.position.copy(R.at).addScaledVector(R.drift, u).add(S.base);
     R.m.quaternion.setFromAxisAngle(R.axis, R.phase + R.spin * t);
   }
+  const fov = S.name === 'turret' ? Math.max(baseFov, 48) : baseFov;   // the turret is seen through a wider lens, so its frame fits
+  if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
   const hero = SHOT_FN[S.name](S, u);
   camera.lookAt(_look);
+  if (!hero) { sky.position.copy(camera.position); finish(S, u); return; }
   // keep the action clear of the words: turn the camera a little whenever the hero drifts toward them
   camera.updateMatrixWorld();
   _ndc.copy(hero).project(camera);
@@ -639,9 +781,14 @@ function step(dt) {
     camera.updateMatrixWorld();
   }
   sky.position.copy(camera.position);
-  // dark between shots; a white flash for the jump
-  const edge = Math.min(u, S.dur - u), cut = 1 - smooth(0, 0.35, edge);
-  const white = S.name === 'jump' ? Math.max(0, 1 - Math.abs(u - JUMP_AT - 0.05) / 0.25) * 0.85 : 0;
+  finish(S, u);
+}
+// quick dips to dark between shots, and inside the trench shot where it cuts from the rim to the chase; a white flash for the jump
+function finish(S, u) {
+  const edge = Math.min(u, S.dur - u);
+  let cut = 1 - smooth(0, 0.2, edge);
+  if (S.name === 'trench') cut = Math.max(cut, 1 - smooth(0, 0.1, Math.abs(u - TR_CUT)));
+  const white = S.name === 'jump' ? Math.max(0, 1 - Math.abs(u - JUMP_AT - 0.08) / 0.3) * 0.9 : 0;
   veil.material.color.copy(white > cut ? _white : INK);
   veil.material.opacity = Math.max(cut, white);
 }
@@ -693,6 +840,21 @@ const ready = Promise.all([
     const glow = new THREE.Sprite(additive(TEX.blue, 0x9fdcff));
     glow.position.set(0, 0.01, -dims.z / 2 - 0.02); glow.scale.set(dims.x * 0.75, dims.y * 1.3, 1);
     obj.add(glow); falcon.glow = glow; falcon.obj = obj; obj.visible = false;
+  }),
+  load('destroyer.bin').then(gltf => {
+    // its file has the bow toward -Z: turned round, like the other ships, so it faces +Z; blue glows in its engines
+    const { obj, holder } = fit(gltf.scene); holder.rotation.y = Math.PI;
+    gltf.scene.traverse(o => { if (o.isMesh) { o.material.envMapIntensity = 0.2; if (o.material.emissiveMap) o.material.emissiveIntensity = 1.4; } });
+    for (const [x, y, z, r] of SD_ENGINES) {
+      const glow = new THREE.Sprite(additive(TEX.blue, 0xa8d4ff)); glow.position.set(x, y, z); glow.scale.setScalar(r); obj.add(glow);
+      const haze = new THREE.Sprite(additive(TEX.blue, 0x5f8fff)); haze.position.set(x, y, z - r * 0.4); haze.scale.setScalar(r * 2.3); haze.material.opacity = 0.45; obj.add(haze);
+    }
+    SD.obj = obj; obj.visible = false;
+  }),
+  load('turret.bin').then(gltf => {
+    // the gunner's eye is its origin; its forward is +Z, the camera's is -Z
+    const t = gltf.scene; t.rotation.y = Math.PI; t.traverse(o => { if (o.isMesh) { o.frustumCulled = false; o.material.envMapIntensity = 0.3; } });
+    camera.add(t); TURRET.obj = t; t.visible = false;
   }),
   load('tie.bin').then(gltf => {
     // opaque, as in the game (its map's alpha would leave the wing panels see-through)
@@ -746,7 +908,7 @@ function setRunning(on) {
   running = on;
   if (on) { last = performance.now(); if (!raf) raf = requestAnimationFrame(frame); }
 }
-const STILL_AT = SH.gates.start + 1.9;   // the still picture: the Falcon lined up with gate B, the Death Star beyond
+const STILL_AT = SH.destroyer.start + 1.9;   // the still picture: the Star Destroyer bearing down, bow first
 const START = +(params.get('t') || (STILL ? STILL_AT : 0));
 ready.then(() => {
   simT = START; step(0);
@@ -766,7 +928,7 @@ if (CAPTURE) {
     advance(sec, fps = 30, draw = true) { const n = Math.round(sec * fps); for (let i = 0; i < n; i++) step(1 / fps); if (draw) { layout(); step(0); renderer.render(scene, camera); } return simT; },
     seek(t) { simT = t; layout(); step(0); renderer.render(scene, camera); return simT; },
     time: () => simT,
-    proj: () => { const t = ((simT % LOOP) + LOOP) % LOOP, S = SHOTS.find(s => t >= s.start && t < s.start + s.dur) || SHOTS[0]; return { t: +t.toFixed(2), shot: S.name, hero: ndc(SHOT_FN[S.name](S, t - S.start)) }; },
+    proj: () => { const t = ((simT % LOOP) + LOOP) % LOOP, S = SHOTS.find(s => t >= s.start && t < s.start + s.dur) || SHOTS[0], h = SHOT_FN[S.name](S, t - S.start); return { t: +t.toFixed(2), shot: S.name, hero: h ? ndc(h) : null }; },
     size: () => ({ css: [sizeW, sizeH], buffer: [renderer.domElement.width, renderer.domElement.height] }) };
 }
 </script>
